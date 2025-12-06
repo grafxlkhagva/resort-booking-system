@@ -1,0 +1,56 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    
+    // Users collection
+    match /users/{userId} {
+      // Anyone authenticated can read user profiles
+      allow read: if request.auth != null;
+      // Users can only update their own profile
+      allow write: if request.auth != null && request.auth.uid == userId;
+    }
+    
+    // Accommodations (Houses) collection
+    match /accommodations/{houseId} {
+      // Anyone can read houses
+      allow read: if true;
+      // Only admins can write
+      allow write: if request.auth != null && 
+                     get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin';
+    }
+    
+    // Amenities collection
+    match /amenities/{amenityId} {
+      // Anyone can read amenities
+      allow read: if true;
+      // Only admins can write
+      allow write: if request.auth != null && 
+                     get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin';
+    }
+    
+    // Bookings collection
+    match /bookings/{bookingId} {
+      // Users can read their own bookings, admins can read all
+      allow read: if request.auth != null && 
+                    (request.auth.uid == resource.data.userId || 
+                     get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin');
+      // Users can create their own bookings
+      allow create: if request.auth != null && request.auth.uid == request.resource.data.userId;
+      // Only admins can update/delete bookings
+      allow update, delete: if request.auth != null && 
+                              get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin';
+    }
+    
+    // Reviews collection
+    match /reviews/{reviewId} {
+      // Anyone can read reviews
+      allow read: if true;
+      // Authenticated users can create reviews
+      allow create: if request.auth != null && request.auth.uid == request.resource.data.userId;
+      // Users can update/delete their own reviews, admins can do anything
+      allow update, delete: if request.auth != null && 
+                              (request.auth.uid == resource.data.userId || 
+                               get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin');
+    }
+  }
+}

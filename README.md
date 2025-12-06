@@ -1,36 +1,77 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Resort Booking System
 
-## Getting Started
+A modern, responsive booking system for a small resort, built with Next.js, Tailwind CSS, and Firebase.
 
-First, run the development server:
+## Features
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+- **User Role**: Browse houses, view details, book houses, view personal bookings.
+- **Admin Role**: Manage houses (add/edit/delete), manage bookings (confirm/cancel).
+- **Authentication**: Secure login/signup using Firebase Auth.
+- **Responsive Design**: Works on mobile and desktop.
+
+## Prerequisites
+
+- Node.js installed.
+- A Firebase account (free tier is sufficient).
+
+## Setup Instructions
+
+### 1. Firebase Setup
+
+1.  Go to [Firebase Console](https://console.firebase.google.com/).
+2.  Create a new project.
+3.  **Enable Authentication**:
+    -   Go to "Build" > "Authentication".
+    -   Click "Get Started".
+    -   Enable "Email/Password" provider.
+4.  **Enable Firestore**:
+    -   Go to "Build" > "Firestore Database".
+    -   Click "Create Database".
+    -   Start in **Test Mode** (for development) or Production Mode (you will need to update rules).
+5.  **Get Config**:
+    -   Go to Project Settings (gear icon).
+    -   Scroll down to "Your apps" and click the Web icon (`</>`).
+    -   Register the app (e.g., "ResortSystem").
+    -   Copy the `firebaseConfig` object values.
+
+### 2. Environment Variables
+
+1.  Rename `.env.local.example` (if exists) or create a new file named `.env.local` in the root directory.
+2.  Add your Firebase config keys:
+
+```env
+NEXT_PUBLIC_FIREBASE_API_KEY="your-api-key"
+NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN="your-project.firebaseapp.com"
+NEXT_PUBLIC_FIREBASE_PROJECT_ID="your-project-id"
+NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET="your-project.appspot.com"
+NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID="your-sender-id"
+NEXT_PUBLIC_FIREBASE_APP_ID="your-app-id"
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+### 3. Run Locally
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+```bash
+npm install
+npm run dev
+```
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+Open [http://localhost:3000](http://localhost:3000).
 
-## Learn More
+### 4. Admin Access
 
-To learn more about Next.js, take a look at the following resources:
+By default, new users are regular 'users'. To make a user an 'admin':
+1.  Sign up a new user in the app.
+2.  Go to Firebase Console > Firestore Database.
+3.  Find the `users` collection.
+4.  Find the document with the user's UID.
+5.  Change the `role` field from `"user"` to `"admin"`.
+6.  Refresh the app. You will now see the "Admin Dashboard" link.
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+## Deployment (Vercel)
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+The easiest way to deploy is using [Vercel](https://vercel.com).
 
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+1.  Push your code to GitHub.
+2.  Import the project in Vercel.
+3.  Add the Environment Variables (from step 2) in the Vercel Project Settings.
+4.  Deploy!
