@@ -372,6 +372,38 @@ export default function SettingsPage() {
                     </div>
                 </div>
 
+                {/* Social Media Settings */}
+                <div className="bg-white shadow rounded-lg p-6">
+                    <div className="flex items-center mb-4">
+                        <svg className="w-6 h-6 text-indigo-600 mr-2" fill="currentColor" viewBox="0 0 24 24">
+                            <path d="M12 2C6.477 2 2 6.477 2 12c0 4.991 3.657 9.128 8.438 9.879V14.89h-2.54V12h2.54V9.797c0-2.506 1.492-3.89 3.777-3.89 1.094 0 2.238.195 2.238.195v2.46h-1.26c-1.243 0-1.63.771-1.63 1.562V12h2.773l-.443 2.89h-2.33v6.989C18.343 21.129 22 16.99 22 12c0-5.523-4.477-10-10-10z" />
+                        </svg>
+                        <h2 className="text-xl font-semibold text-gray-900">Сошиал Медиа Холбоосууд</h2>
+                    </div>
+                    <div className="space-y-4">
+                        <div>
+                            <label className="block text-sm font-medium text-gray-700">Facebook</label>
+                            <input
+                                type="url"
+                                className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm border p-2"
+                                value={settings.social?.facebook || ""}
+                                onChange={(e) => setSettings({ ...settings, social: { ...settings.social, facebook: e.target.value, instagram: settings.social?.instagram || "" } })}
+                                placeholder="https://facebook.com/yourpage"
+                            />
+                        </div>
+                        <div>
+                            <label className="block text-sm font-medium text-gray-700">Instagram</label>
+                            <input
+                                type="url"
+                                className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm border p-2"
+                                value={settings.social?.instagram || ""}
+                                onChange={(e) => setSettings({ ...settings, social: { ...settings.social, instagram: e.target.value, facebook: settings.social?.facebook || "" } })}
+                                placeholder="https://instagram.com/yourpage"
+                            />
+                        </div>
+                    </div>
+                </div>
+
                 <div className="flex justify-end">
                     <button
                         type="submit"

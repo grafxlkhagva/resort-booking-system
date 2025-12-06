@@ -78,12 +78,16 @@ export interface ResortSettings {
         title: string;
         subtitle: string;
     };
-    branding: {
+    branding?: {
         siteName: string;
         siteNameColor: string;
         logoUrl: string;
         showLogo: boolean;
         showName: boolean;
+    };
+    social?: {
+        facebook: string;
+        instagram: string;
     };
 }
 
