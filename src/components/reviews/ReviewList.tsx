@@ -94,7 +94,12 @@ export default function ReviewList({ houseId, refreshTrigger }: ReviewListProps)
                                             ))}
                                         </div>
                                         <p className="text-xs text-gray-500">
-                                            {review.createdAt ? new Date(review.createdAt.seconds * 1000).toLocaleDateString() : ""}
+                                            {review.createdAt
+                                                ? new Date(typeof review.createdAt === 'number'
+                                                    ? review.createdAt
+                                                    : (review.createdAt as any).seconds * 1000
+                                                ).toLocaleDateString()
+                                                : ""}
                                         </p>
                                     </div>
                                 </div>
