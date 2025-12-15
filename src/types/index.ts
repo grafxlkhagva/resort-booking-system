@@ -25,18 +25,27 @@ export interface HouseAmenity {
     quantity: number;
 }
 
+export type HouseStatus = 'clean' | 'dirty' | 'cleaning' | 'occupied' | 'maintenance';
+
 export interface House {
     id: string;
     name: string;
-    houseNumber: number; // New field
+    houseNumber: number;
     description: string;
     longDescription?: string;
     price: number;
     capacity: number;
     imageUrl: string;
     images?: string[];
-    amenities: HouseAmenity[]; // Changed from string[] to support quantity
+    amenities: HouseAmenity[];
     createdAt: number;
+    status?: HouseStatus; // Default: 'clean'
+    currentGuest?: {
+        name: string;
+        phone: string;
+        bookingId: string;
+        checkOutDate: number; // For showing when they leave
+    };
     discount?: {
         price: number;
         startDate?: number;
@@ -51,15 +60,23 @@ export type BookingStatus = 'pending' | 'confirmed' | 'cancelled';
 
 export interface Booking {
     id: string;
-    userId: string;
+    userId?: string; // Made optional for manual bookings
+    guestDetails?: { // For manual bookings
+        firstName: string;
+        lastName: string;
+        phoneNumber: string;
+        email?: string;
+    };
     houseId: string;
-    houseName: string; // Denormalized for easier display
-    startDate: number; // Timestamp
-    endDate: number;   // Timestamp
+    houseName: string;
+    startDate: number;
+    endDate: number;
     totalPrice: number;
     status: BookingStatus;
     createdAt: number;
     guestCount: number;
+    paymentType?: 'full' | 'partial' | 'barter' | 'custom'; // New for manual/barter types
+    barterDescription?: string; // For barter details
 }
 
 export interface ResortSettings {

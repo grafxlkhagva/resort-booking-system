@@ -39,17 +39,25 @@ export default function ManageBookings() {
                 querySnapshot.docs.map(async (docSnapshot) => {
                     const bookingData = { id: docSnapshot.id, ...docSnapshot.data() } as BookingWithUserInfo;
 
-                    // Fetch user info
-                    try {
-                        const userDoc = await getDoc(doc(db, "users", bookingData.userId));
-                        if (userDoc.exists()) {
-                            const userData = userDoc.data();
-                            bookingData.userName = userData.displayName || userData.firstName || "Нэр байхгүй";
-                            bookingData.userEmail = userData.email || "";
-                            bookingData.userPhoneNumber = userData.phoneNumber || "";
+                    // Fetch user info or use guest details
+                    if (bookingData.userId) {
+                        try {
+                            const userDoc = await getDoc(doc(db, "users", bookingData.userId));
+                            if (userDoc.exists()) {
+                                const userData = userDoc.data();
+                                bookingData.userName = userData.displayName || userData.firstName || "Нэр байхгүй";
+                                bookingData.userEmail = userData.email || "";
+                                bookingData.userPhoneNumber = userData.phoneNumber || "";
+                            }
+                        } catch (error) {
+                            console.error("Error fetching user:", error);
                         }
-                    } catch (error) {
-                        console.error("Error fetching user:", error);
+                    } else if (bookingData.guestDetails) {
+                        bookingData.userName = `${bookingData.guestDetails.firstName} ${bookingData.guestDetails.lastName || ''}`.trim();
+                        bookingData.userEmail = bookingData.guestDetails.email || "";
+                        bookingData.userPhoneNumber = bookingData.guestDetails.phoneNumber;
+                    } else {
+                        bookingData.userName = "Зочны мэдээлэл байхгүй";
                     }
 
                     return bookingData;

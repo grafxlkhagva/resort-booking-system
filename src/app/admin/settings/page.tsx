@@ -49,12 +49,28 @@ export default function SettingsPage() {
                 const docRef = doc(db, "settings", "general");
                 const docSnap = await getDoc(docRef);
                 if (docSnap.exists()) {
-                    const data = docSnap.data() as ResortSettings;
+                    const data = docSnap.data() as Partial<ResortSettings>;
                     setSettings(prev => ({
                         ...prev,
                         ...data,
-                        cover: { ...prev.cover, ...data.cover },
-                        branding: { ...prev.branding, ...data.branding }
+                        map: { ...prev.map, ...data.map },
+                        contact: { ...prev.contact, ...data.contact },
+                        cover: {
+                            imageUrl: data.cover?.imageUrl || prev.cover.imageUrl,
+                            title: data.cover?.title || prev.cover.title,
+                            subtitle: data.cover?.subtitle || prev.cover.subtitle
+                        },
+                        branding: {
+                            siteName: data.branding?.siteName || prev.branding?.siteName || "ResortBook",
+                            siteNameColor: data.branding?.siteNameColor || prev.branding?.siteNameColor || "#4F46E5",
+                            logoUrl: data.branding?.logoUrl || prev.branding?.logoUrl || "",
+                            showLogo: data.branding?.showLogo ?? prev.branding?.showLogo ?? false,
+                            showName: data.branding?.showName ?? prev.branding?.showName ?? true,
+                        },
+                        social: {
+                            facebook: data.social?.facebook || prev.social?.facebook || "",
+                            instagram: data.social?.instagram || prev.social?.instagram || ""
+                        }
                     }));
                 }
             } catch (error) {
@@ -81,6 +97,14 @@ export default function SettingsPage() {
         }
     };
 
+    const defaultBranding = {
+        siteName: "ResortBook",
+        siteNameColor: "#4F46E5",
+        logoUrl: "",
+        showLogo: false,
+        showName: true
+    };
+
     const handleSave = async (e: React.FormEvent) => {
         e.preventDefault();
         setSaving(true);
@@ -100,14 +124,16 @@ export default function SettingsPage() {
                 logoUrl = await getDownloadURL(storageRef);
             }
 
-            const updatedSettings = {
+            const currentBranding = settings.branding || defaultBranding;
+
+            const updatedSettings: ResortSettings = {
                 ...settings,
                 cover: {
                     ...settings.cover,
                     imageUrl: coverImageUrl
                 },
                 branding: {
-                    ...settings.branding,
+                    ...currentBranding,
                     logoUrl: logoUrl
                 }
             };
@@ -148,7 +174,7 @@ export default function SettingsPage() {
                                     type="text"
                                     className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm border p-2"
                                     value={settings.branding?.siteName || ""}
-                                    onChange={(e) => setSettings({ ...settings, branding: { ...settings.branding, siteName: e.target.value } })}
+                                    onChange={(e) => setSettings({ ...settings, branding: { ...(settings.branding || defaultBranding), siteName: e.target.value } })}
                                     placeholder="ResortBook"
                                 />
                             </div>
@@ -159,7 +185,7 @@ export default function SettingsPage() {
                                         type="color"
                                         className="h-10 w-20 p-1 rounded border border-gray-300"
                                         value={settings.branding?.siteNameColor || "#4F46E5"}
-                                        onChange={(e) => setSettings({ ...settings, branding: { ...settings.branding, siteNameColor: e.target.value } })}
+                                        onChange={(e) => setSettings({ ...settings, branding: { ...(settings.branding || defaultBranding), siteNameColor: e.target.value } })}
                                     />
                                     <span className="text-sm text-gray-500">{settings.branding?.siteNameColor}</span>
                                 </div>
@@ -172,7 +198,7 @@ export default function SettingsPage() {
                                 {(logoFile || settings.branding?.logoUrl) ? (
                                     <div className="relative w-16 h-16 border rounded overflow-hidden bg-gray-50 flex items-center justify-center">
                                         <img
-                                            src={logoFile ? URL.createObjectURL(logoFile) : settings.branding.logoUrl}
+                                            src={logoFile ? URL.createObjectURL(logoFile) : settings.branding?.logoUrl}
                                             alt="Logo Preview"
                                             className="max-w-full max-h-full object-contain"
                                         />
@@ -198,7 +224,7 @@ export default function SettingsPage() {
                                     type="checkbox"
                                     className="h-4 w-4 text-indigo-600 focus:ring-indigo-500 border-gray-300 rounded"
                                     checked={settings.branding?.showLogo || false}
-                                    onChange={(e) => setSettings({ ...settings, branding: { ...settings.branding, showLogo: e.target.checked } })}
+                                    onChange={(e) => setSettings({ ...settings, branding: { ...(settings.branding || defaultBranding), showLogo: e.target.checked } })}
                                 />
                                 <label htmlFor="showLogo" className="ml-2 block text-sm text-gray-900">
                                     Лого харуулах
@@ -210,7 +236,7 @@ export default function SettingsPage() {
                                     type="checkbox"
                                     className="h-4 w-4 text-indigo-600 focus:ring-indigo-500 border-gray-300 rounded"
                                     checked={settings.branding?.showName !== false} // Default true
-                                    onChange={(e) => setSettings({ ...settings, branding: { ...settings.branding, showName: e.target.checked } })}
+                                    onChange={(e) => setSettings({ ...settings, branding: { ...(settings.branding || defaultBranding), showName: e.target.checked } })}
                                 />
                                 <label htmlFor="showName" className="ml-2 block text-sm text-gray-900">
                                     Нэр харуулах
