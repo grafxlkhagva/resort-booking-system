@@ -11,6 +11,7 @@ import ReviewForm from "@/components/reviews/ReviewForm";
 import { useAmenities } from "@/hooks/useAmenities";
 import { Users, Wifi, Wind, MapPin, Star, Share2, Heart, Check, User } from "lucide-react";
 import { isDiscountActive, formatValidDays, getDiscountStatus } from "@/lib/utils";
+import { ResortSettings } from "@/types"; // Import ResortSettings
 
 export default function HouseDetail() {
     const { id } = useParams();
@@ -23,6 +24,40 @@ export default function HouseDetail() {
     // Review stats
     const [reviews, setReviews] = useState<any[]>([]);
     const [averageRating, setAverageRating] = useState(0);
+
+    const [bookingBlocked, setBookingBlocked] = useState(false);
+    const [blockMessage, setBlockMessage] = useState("");
+
+    // Check for blocking
+    useEffect(() => {
+        const checkBlocking = async () => {
+            try {
+                const docRef = doc(db, "settings", "general");
+                const docSnap = await getDoc(docRef);
+                if (docSnap.exists()) {
+                    const settings = docSnap.data() as ResortSettings;
+                    const bookingControl = settings.bookingControl;
+
+                    if (bookingControl?.isBlocked) {
+                        const now = Date.now();
+                        const start = bookingControl.blockStartDate || 0;
+                        const end = bookingControl.blockEndDate || Number.MAX_SAFE_INTEGER;
+
+                        if (now >= start && now <= end) {
+                            setBookingBlocked(true);
+                            // Optional: Format message
+                            const startStr = bookingControl.blockStartDate ? new Date(bookingControl.blockStartDate).toLocaleDateString() : '..';
+                            const endStr = bookingControl.blockEndDate ? new Date(bookingControl.blockEndDate).toLocaleDateString() : '..';
+                            setBlockMessage(`Системийн засвар үйлчилгээ эсвэл захиалга хаагдсан тул (${startStr} - ${endStr}) хооронд захиалга авах боломжгүй байна.`);
+                        }
+                    }
+                }
+            } catch (e) {
+                console.error("Error checking settings", e);
+            }
+        };
+        checkBlocking();
+    }, []);
 
     useEffect(() => {
         const fetchHouse = async () => {
@@ -292,12 +327,27 @@ export default function HouseDetail() {
                             </div>
                         </div>
 
-                        <button
-                            onClick={() => setShowModal(true)}
-                            className="w-full bg-indigo-600 border border-transparent rounded-lg py-3 px-4 flex items-center justify-center text-lg font-semibold text-white hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 transition-colors"
-                        >
-                            Захиалах
-                        </button>
+                        {bookingBlocked ? (
+                            <div className="bg-red-50 border border-red-200 rounded-lg p-4 text-center">
+                                <p className="text-red-800 font-medium mb-1">Захиалга Түр Хаагдсан</p>
+                                <p className="text-sm text-red-600">
+                                    {blockMessage || "Одоогоор захиалга авах боломжгүй байна."}
+                                </p>
+                                <button
+                                    disabled
+                                    className="w-full mt-3 bg-gray-300 border border-transparent rounded-lg py-3 px-4 flex items-center justify-center text-lg font-semibold text-gray-500 cursor-not-allowed"
+                                >
+                                    Захиалах Боломжгүй
+                                </button>
+                            </div>
+                        ) : (
+                            <button
+                                onClick={() => setShowModal(true)}
+                                className="w-full bg-indigo-600 border border-transparent rounded-lg py-3 px-4 flex items-center justify-center text-lg font-semibold text-white hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 transition-colors"
+                            >
+                                Захиалах
+                            </button>
+                        )}
 
                         <p className="text-xs text-center text-gray-500 mt-4">
                             Төлбөрийг баталгаажуулсны дараа төлнө

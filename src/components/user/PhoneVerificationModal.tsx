@@ -4,7 +4,7 @@ import { useState, useEffect } from "react";
 import { auth, db } from "@/lib/firebase";
 import { RecaptchaVerifier, signInWithPhoneNumber, ConfirmationResult } from "firebase/auth";
 import { doc, updateDoc } from "firebase/firestore";
-import { X, Phone, Check } from "lucide-react";
+import { X, Phone } from "lucide-react";
 
 interface PhoneVerificationModalProps {
     userId: string;
@@ -82,11 +82,12 @@ export default function PhoneVerificationModal({ userId, onVerified, onClose }: 
             const confirmation = await signInWithPhoneNumber(auth, phoneNumber, recaptchaVerifier);
             setConfirmationResult(confirmation);
             setStep("otp");
-        } catch (err: any) {
+        } catch (err: unknown) {
             console.error("Error sending OTP:", err);
-            if (err.code === 'auth/invalid-phone-number') {
+            const errorObj = err as { code?: string };
+            if (errorObj.code === 'auth/invalid-phone-number') {
                 setError("Утасны дугаар буруу байна.");
-            } else if (err.code === 'auth/too-many-requests') {
+            } else if (errorObj.code === 'auth/too-many-requests') {
                 setError("Хэт олон оролдлого хийсэн байна. Түр хүлээгээд дахин оролдоно уу.");
             } else {
                 setError("OTP илгээхэд алдаа гарлаа. Дахин оролдоно уу.");
@@ -128,11 +129,12 @@ export default function PhoneVerificationModal({ userId, onVerified, onClose }: 
             });
 
             onVerified(phoneNumber);
-        } catch (err: any) {
+        } catch (err: unknown) {
             console.error("Error verifying OTP:", err);
-            if (err.code === 'auth/invalid-verification-code') {
+            const errorObj = err as { code?: string };
+            if (errorObj.code === 'auth/invalid-verification-code') {
                 setError("Код буруу байна. Дахин оролдоно уу.");
-            } else if (err.code === 'auth/code-expired') {
+            } else if (errorObj.code === 'auth/code-expired') {
                 setError("Кодын хугацаа дууссан байна. Шинээр код авна уу.");
                 setStep("phone");
             } else {

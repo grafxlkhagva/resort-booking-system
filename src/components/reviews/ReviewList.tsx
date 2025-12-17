@@ -97,7 +97,7 @@ export default function ReviewList({ houseId, refreshTrigger }: ReviewListProps)
                                             {review.createdAt
                                                 ? new Date(typeof review.createdAt === 'number'
                                                     ? review.createdAt
-                                                    : (review.createdAt as any).seconds * 1000
+                                                    : (review.createdAt as unknown as { seconds: number }).seconds * 1000
                                                 ).toLocaleDateString()
                                                 : ""}
                                         </p>
@@ -105,7 +105,7 @@ export default function ReviewList({ houseId, refreshTrigger }: ReviewListProps)
                                 </div>
                             </div>
                             <p className="text-sm text-gray-600">
-                                "{review.comment}"
+                                &quot;{review.comment}&quot;
                             </p>
                         </div>
                     ))

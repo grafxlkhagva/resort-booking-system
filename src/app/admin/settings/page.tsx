@@ -7,13 +7,16 @@ import { db, storage } from "@/lib/firebase";
 import { doc, getDoc, setDoc } from "firebase/firestore";
 import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
 import { ResortSettings } from "@/types";
-import { Save, MapPin, Phone, Mail, Map as MapIcon, Image as ImageIcon, Palette } from "lucide-react";
+import { Save, MapPin, Phone, Mail, Map as MapIcon, Image as ImageIcon, Palette, Calendar, CheckCircle } from "lucide-react";
+
+import AdminPhoneVerificationModal from "@/components/admin/AdminPhoneVerificationModal";
 
 export default function SettingsPage() {
     const { isAdmin, loading: authLoading } = useAuth();
     const router = useRouter();
     const [loading, setLoading] = useState(true);
     const [saving, setSaving] = useState(false);
+    const [showPhoneVerify, setShowPhoneVerify] = useState(false);
 
     const [coverImageFile, setCoverImageFile] = useState<File | null>(null);
     const [logoFile, setLogoFile] = useState<File | null>(null);
@@ -97,7 +100,7 @@ export default function SettingsPage() {
         }
     };
 
-    const defaultBranding = {
+    const defaultBranding: NonNullable<ResortSettings['branding']> = {
         siteName: "ResortBook",
         siteNameColor: "#4F46E5",
         logoUrl: "",
@@ -160,6 +163,149 @@ export default function SettingsPage() {
             <h1 className="text-3xl font-bold text-gray-900 mb-8">Ерөнхий Тохиргоо</h1>
 
             <form onSubmit={handleSave} className="space-y-8">
+                {/* Unified Booking Management Settings */}
+                <div className="bg-white shadow rounded-lg p-6 border-l-4 border-indigo-500">
+                    <div className="flex items-center mb-4">
+                        <Calendar className="text-indigo-600 mr-2" />
+                        <h2 className="text-xl font-semibold text-gray-900">Захиалгын Нэгдсэн Удирдлага</h2>
+                    </div>
+                    <div className="space-y-6">
+                        {/* Booking Blocking Control */}
+                        <div className="border-b border-gray-200 pb-6">
+                            <div className="flex items-center justify-between mb-4">
+                                <div>
+                                    <h3 className="text-lg font-medium text-gray-900">Захиалга Хаах</h3>
+                                    <p className="text-sm text-gray-500">Тодорхой хугацаанд бүх захиалгыг зогсоох</p>
+                                </div>
+                                <div className="flex items-center">
+                                    <input
+                                        id="blockBookings"
+                                        type="checkbox"
+                                        className="h-6 w-6 text-indigo-600 focus:ring-indigo-500 border-gray-300 rounded"
+                                        checked={settings.bookingControl?.isBlocked || false}
+                                        onChange={(e) => setSettings({
+                                            ...settings,
+                                            bookingControl: { ...settings.bookingControl, isBlocked: e.target.checked }
+                                        })}
+                                    />
+                                </div>
+                            </div>
+
+                            {settings.bookingControl?.isBlocked && (
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 bg-gray-50 p-4 rounded-md">
+                                    <div>
+                                        <label className="block text-sm font-medium text-gray-700">Эхлэх Огноо</label>
+                                        <input
+                                            type="date"
+                                            className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm border p-2"
+                                            value={settings.bookingControl?.blockStartDate ? new Date(settings.bookingControl.blockStartDate).toLocaleDateString('en-CA') : ""}
+                                            onChange={(e) => {
+                                                const date = e.target.value ? new Date(e.target.value) : undefined;
+                                                if (date) date.setHours(0, 0, 0, 0);
+                                                setSettings({
+                                                    ...settings,
+                                                    bookingControl: {
+                                                        ...settings.bookingControl,
+                                                        isBlocked: settings.bookingControl?.isBlocked || false,
+                                                        blockStartDate: date?.getTime()
+                                                    }
+                                                });
+                                            }}
+                                        />
+                                    </div>
+                                    <div>
+                                        <label className="block text-sm font-medium text-gray-700">Дуусах Огноо</label>
+                                        <input
+                                            type="date"
+                                            className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm border p-2"
+                                            value={settings.bookingControl?.blockEndDate ? new Date(settings.bookingControl.blockEndDate).toLocaleDateString('en-CA') : ""}
+                                            onChange={(e) => {
+                                                const date = e.target.value ? new Date(e.target.value) : undefined;
+                                                if (date) date.setHours(23, 59, 59, 999);
+                                                setSettings({
+                                                    ...settings,
+                                                    bookingControl: {
+                                                        ...settings.bookingControl,
+                                                        isBlocked: settings.bookingControl?.isBlocked || false,
+                                                        blockEndDate: date?.getTime()
+                                                    }
+                                                });
+                                            }}
+                                        />
+                                    </div>
+                                </div>
+                            )}
+                        </div>
+
+                        {/* Notification Phone Settings */}
+                        <div>
+                            <div className="flex flex-col md:flex-row md:items-start justify-between gap-4">
+                                <div className="flex-1">
+                                    <h3 className="text-lg font-medium text-gray-900 mb-1">Мэдэгдэл Хүлээн Авах Утас</h3>
+                                    <p className="text-sm text-gray-500 mb-2">
+                                        Шинэ захиалга хийгдэх үед энэ дугаар луу SMS мэдэгдэл илгээнэ.
+                                    </p>
+                                    <div className="flex items-center space-x-2">
+                                        <input
+                                            type="tel"
+                                            placeholder="+976 99112233"
+                                            className="block w-full max-w-xs rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm border p-2"
+                                            value={settings.bookingControl?.notificationPhone || ""}
+                                            onChange={(e) => setSettings({
+                                                ...settings,
+                                                bookingControl: {
+                                                    ...settings.bookingControl,
+                                                    isBlocked: settings.bookingControl?.isBlocked || false,
+                                                    notificationPhone: e.target.value,
+                                                    notificationPhoneVerified: false
+                                                }
+                                            })}
+                                        />
+                                        {/* Since verification logic requires more complex backend/OTP flow for a generic number (not logged in user), 
+                                            we will treat saving as enough or assume manual verification for this demo version, 
+                                            OR we could trigger a mock verification. 
+                                            User requested "SMS-eer batalgaajuuldag bolgoyo". 
+                                            We can add a button "Verify" that shows a modal (mock or real logic).
+                                        */}
+                                        <button
+                                            type="button"
+                                            onClick={() => setShowPhoneVerify(true)}
+                                            className="px-3 py-2 border border-gray-300 shadow-sm text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none"
+                                        >
+                                            Баталгаажуулах
+                                        </button>
+                                    </div>
+                                    {settings.bookingControl?.notificationPhoneVerified && (
+                                        <p className="mt-1 text-sm text-green-600 flex items-center">
+                                            <CheckCircle className="w-4 h-4 mr-1" /> Баталгаажсан дугаар
+                                        </p>
+                                    )}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                {/* Phone Verification Modal */}
+                {showPhoneVerify && (
+                    <AdminPhoneVerificationModal
+                        initialPhone={settings.bookingControl?.notificationPhone}
+                        onClose={() => setShowPhoneVerify(false)}
+                        onVerified={(phone) => {
+                            setSettings({
+                                ...settings,
+                                bookingControl: {
+                                    ...settings.bookingControl,
+                                    isBlocked: settings.bookingControl?.isBlocked || false,
+                                    notificationPhone: phone,
+                                    notificationPhoneVerified: true
+                                }
+                            });
+                            setShowPhoneVerify(false);
+                        }}
+                    />
+                )}
+
                 {/* Branding Settings */}
                 <div className="bg-white shadow rounded-lg p-6">
                     <div className="flex items-center mb-4">

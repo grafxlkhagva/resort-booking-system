@@ -1,10 +1,10 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { db } from "@/lib/firebase";
 import { collection, getDocs, query, where, orderBy, doc, getDoc, updateDoc } from "firebase/firestore";
-import { Booking } from "@/types";
+import { Booking, UserProfile } from "@/types";
 import { useRouter } from "next/navigation";
 import { Calendar, Clock, User, Phone, Edit2, Check, X } from "lucide-react";
 
@@ -12,54 +12,27 @@ export default function ProfilePage() {
     const { user, loading: authLoading } = useAuth();
     const [bookings, setBookings] = useState<Booking[]>([]);
     const [loading, setLoading] = useState(true);
-    const [userProfile, setUserProfile] = useState<any>(null);
+    const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
     const [isEditingName, setIsEditingName] = useState(false);
     const [displayName, setDisplayName] = useState("");
     const [savingName, setSavingName] = useState(false);
     const router = useRouter();
 
-    useEffect(() => {
-        if (!authLoading && !user) {
-            router.push("/login");
-        } else if (user) {
-            fetchUserProfile();
-            fetchBookings();
-        }
-    }, [user, authLoading, router]);
-
-    const fetchUserProfile = async () => {
+    const fetchUserProfile = useCallback(async () => {
         if (!user) return;
         try {
             const userDoc = await getDoc(doc(db, "users", user.uid));
             if (userDoc.exists()) {
-                const data = userDoc.data();
+                const data = userDoc.data() as UserProfile;
                 setUserProfile(data);
                 setDisplayName(data.displayName || "");
             }
         } catch (error) {
             console.error("Error fetching user profile:", error);
         }
-    };
+    }, [user]);
 
-    const handleSaveName = async () => {
-        if (!user || !displayName.trim()) return;
-
-        setSavingName(true);
-        try {
-            await updateDoc(doc(db, "users", user.uid), {
-                displayName: displayName.trim()
-            });
-            setUserProfile({ ...userProfile, displayName: displayName.trim() });
-            setIsEditingName(false);
-        } catch (error) {
-            console.error("Error saving name:", error);
-            alert("Нэр хадгалахад алдаа гарлаа.");
-        } finally {
-            setSavingName(false);
-        }
-    };
-
-    const fetchBookings = async () => {
+    const fetchBookings = useCallback(async () => {
         if (!user) return;
         try {
             const q = query(
@@ -77,6 +50,35 @@ export default function ProfilePage() {
             console.error("Error fetching bookings:", error);
         } finally {
             setLoading(false);
+        }
+    }, [user]);
+
+    useEffect(() => {
+        if (!authLoading && !user) {
+            router.push("/login");
+        } else if (user) {
+            fetchUserProfile();
+            fetchBookings();
+        }
+    }, [user, authLoading, router, fetchUserProfile, fetchBookings]);
+
+    const handleSaveName = async () => {
+        if (!user || !displayName.trim()) return;
+
+        setSavingName(true);
+        try {
+            await updateDoc(doc(db, "users", user.uid), {
+                displayName: displayName.trim()
+            });
+            if (userProfile) {
+                setUserProfile({ ...userProfile, displayName: displayName.trim() });
+            }
+            setIsEditingName(false);
+        } catch (error) {
+            console.error("Error saving name:", error);
+            alert("Нэр хадгалахад алдаа гарлаа.");
+        } finally {
+            setSavingName(false);
         }
     };
 

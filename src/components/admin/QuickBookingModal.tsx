@@ -4,7 +4,9 @@ import { useState, useEffect } from "react";
 import { X, Calendar, User, Phone, Mail, DollarSign, FileText, PenTool } from "lucide-react";
 import { addDoc, collection, updateDoc, doc } from "firebase/firestore";
 import { db } from "@/lib/firebase";
-import { House, Booking } from "@/types";
+import { House, Booking, ResortSettings } from "@/types";
+import { sendBookingNotificationSMS, formatBookingMessage } from "@/lib/sms";
+import { getDoc } from "firebase/firestore";
 
 interface QuickBookingModalProps {
     isOpen: boolean;
@@ -103,6 +105,29 @@ export default function QuickBookingModal({ isOpen, onClose, houses, preSelected
                         checkOutDate: new Date(endDate).getTime()
                     }
                 });
+            }
+
+            // Send SMS if enabled
+            try {
+                const settingsDoc = await getDoc(doc(db, "settings", "general"));
+                if (settingsDoc.exists()) {
+                    const settings = settingsDoc.data() as ResortSettings;
+                    const phone = settings.bookingControl?.notificationPhone;
+
+                    if (phone) {
+                        const message = formatBookingMessage(
+                            house.name,
+                            `${guestFirstName} ${guestLastName}`,
+                            new Date(startDate).toLocaleDateString(),
+                            new Date(endDate).toLocaleDateString(),
+                            totalPrice,
+                            true
+                        );
+                        await sendBookingNotificationSMS(phone, message);
+                    }
+                }
+            } catch (err) {
+                console.error("Failed to send booking SMS:", err);
             }
 
             setSuccess("Захиалга амжилттай үүсгэгдлээ!");

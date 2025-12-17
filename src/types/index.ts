@@ -106,6 +106,13 @@ export interface ResortSettings {
         facebook: string;
         instagram: string;
     };
+    bookingControl?: {
+        isBlocked: boolean;
+        blockStartDate?: number;
+        blockEndDate?: number;
+        notificationPhone?: string;
+        notificationPhoneVerified?: boolean;
+    }
 }
 
 export interface Review {

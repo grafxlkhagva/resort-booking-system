@@ -8,6 +8,9 @@ import { addDoc, collection } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import { X, Check, Calendar, Users as UsersIcon } from "lucide-react";
 import { calculateBookingPrice, type BookingPriceBreakdown } from "@/lib/utils";
+import { getDoc, doc } from "firebase/firestore"; // Import doc & getDoc
+import { ResortSettings } from "@/types";
+import { sendBookingNotificationSMS, formatBookingMessage } from "@/lib/sms";
 
 interface BookingModalProps {
     house: House;
@@ -94,6 +97,30 @@ export default function BookingModal({
             });
 
             setSuccess(true);
+
+            setSuccess(true);
+
+            // Send Notification SMS to Admin
+            try {
+                const settingsDoc = await getDoc(doc(db, "settings", "general"));
+                if (settingsDoc.exists()) {
+                    const settings = settingsDoc.data() as ResortSettings;
+                    const phone = settings.bookingControl?.notificationPhone;
+
+                    if (phone) {
+                        const message = formatBookingMessage(
+                            house.name,
+                            user.displayName || user.email || "Зочин",
+                            new Date(startDate).toLocaleDateString(),
+                            new Date(endDate).toLocaleDateString(),
+                            priceBreakdown.totalPrice
+                        );
+                        await sendBookingNotificationSMS(phone, message);
+                    }
+                }
+            } catch (err) {
+                console.error("Failed to send notification SMS", err);
+            }
 
             // Auto redirect after 2 seconds
             setTimeout(() => {

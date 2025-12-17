@@ -1,7 +1,7 @@
 "use client";
 
-import { useState, useEffect } from "react";
-import { House } from "@/types";
+import { useState } from "react";
+import { House, HouseAmenity } from "@/types";
 import { useAmenities } from "@/hooks/useAmenities";
 import { getDiscountStatus } from "@/lib/utils";
 import { storage } from "@/lib/firebase";
@@ -438,7 +438,7 @@ export default function HouseForm({ initialData, onSubmit, onCancel }: HouseForm
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                         {amenities.map((amenity) => {
                             // Find existing assignment
-                            const currentAssignment = formData.amenities.find((a: any) =>
+                            const currentAssignment = formData.amenities.find((a: HouseAmenity | string) =>
                                 (typeof a === 'string' ? a === amenity.id : a.amenityId === amenity.id)
                             );
 
@@ -461,7 +461,7 @@ export default function HouseForm({ initialData, onSubmit, onCancel }: HouseForm
                                             type="button"
                                             onClick={() => {
                                                 const newAmenities = [...formData.amenities];
-                                                const index = newAmenities.findIndex((a: any) =>
+                                                const index = newAmenities.findIndex((a: HouseAmenity | string) =>
                                                     (typeof a === 'string' ? a === amenity.id : a.amenityId === amenity.id)
                                                 );
 
@@ -488,7 +488,7 @@ export default function HouseForm({ initialData, onSubmit, onCancel }: HouseForm
                                             type="button"
                                             onClick={() => {
                                                 const newAmenities = [...formData.amenities];
-                                                const index = newAmenities.findIndex((a: any) =>
+                                                const index = newAmenities.findIndex((a: HouseAmenity | string) =>
                                                     (typeof a === 'string' ? a === amenity.id : a.amenityId === amenity.id)
                                                 );
 
