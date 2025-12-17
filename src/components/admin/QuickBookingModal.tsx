@@ -75,7 +75,7 @@ export default function QuickBookingModal({ isOpen, onClose, houses, preSelected
                     firstName: guestFirstName,
                     lastName: guestLastName,
                     phoneNumber: guestPhone,
-                    email: guestEmail || undefined
+                    email: guestEmail || null // Use null instead of undefined for Firestore
                 },
                 startDate: new Date(startDate).getTime(),
                 endDate: new Date(endDate).getTime(),
@@ -84,7 +84,7 @@ export default function QuickBookingModal({ isOpen, onClose, houses, preSelected
                 createdAt: Date.now(),
                 guestCount: 1, // Default, maybe add field if needed
                 paymentType: bookingType === 'system' ? 'full' : (bookingType === 'manual' ? 'custom' : 'barter'),
-                barterDescription: bookingType === 'barter' ? barterDescription : undefined,
+                barterDescription: bookingType === 'barter' ? barterDescription : null, // Use null instead of undefined
             };
 
             const bookingRef = await addDoc(collection(db, "bookings"), newBooking);

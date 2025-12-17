@@ -65,7 +65,7 @@ export interface Booking {
         firstName: string;
         lastName: string;
         phoneNumber: string;
-        email?: string;
+        email?: string | null;
     };
     houseId: string;
     houseName: string;
@@ -76,7 +76,7 @@ export interface Booking {
     createdAt: number;
     guestCount: number;
     paymentType?: 'full' | 'partial' | 'barter' | 'custom'; // New for manual/barter types
-    barterDescription?: string; // For barter details
+    barterDescription?: string | null; // For barter details
 }
 
 export interface ResortSettings {
