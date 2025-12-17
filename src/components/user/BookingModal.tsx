@@ -115,25 +115,28 @@ export default function BookingModal({
 
             setSuccess(true);
 
-            setSuccess(true);
-
             // Send Notification SMS to Admin
             try {
                 const settingsDoc = await getDoc(doc(db, "settings", "general"));
+                let phone = "";
                 if (settingsDoc.exists()) {
                     const settings = settingsDoc.data() as ResortSettings;
-                    const phone = settings.bookingControl?.notificationPhone;
+                    phone = settings.bookingControl?.notificationPhone || "";
+                }
 
-                    if (phone) {
-                        const message = formatBookingMessage(
-                            house.name,
-                            user.displayName || user.email || "Зочин",
-                            new Date(startDate).toLocaleDateString(),
-                            new Date(endDate).toLocaleDateString(),
-                            priceBreakdown.totalPrice
-                        );
-                        await sendBookingNotificationSMS(phone, message);
-                    }
+                if (phone) {
+                    const message = formatBookingMessage(
+                        house.name,
+                        user.displayName || user.email || "Зочин",
+                        new Date(startDate).toLocaleDateString(),
+                        new Date(endDate).toLocaleDateString(),
+                        priceBreakdown.totalPrice
+                    );
+                    await sendBookingNotificationSMS(phone, message);
+                    // For user facing modal, we might just log to console or show a small toast, but avoiding alert as it interrupts flow.
+                    console.log(`[Mock SMS] Admin notified at ${phone}`);
+                } else {
+                    console.log("[Mock SMS] No admin phone configured.");
                 }
             } catch (err) {
                 console.error("Failed to send notification SMS", err);

@@ -110,21 +110,26 @@ export default function QuickBookingModal({ isOpen, onClose, houses, preSelected
             // Send SMS if enabled
             try {
                 const settingsDoc = await getDoc(doc(db, "settings", "general"));
+                let phone = "";
                 if (settingsDoc.exists()) {
                     const settings = settingsDoc.data() as ResortSettings;
-                    const phone = settings.bookingControl?.notificationPhone;
+                    phone = settings.bookingControl?.notificationPhone || "";
+                }
 
-                    if (phone) {
-                        const message = formatBookingMessage(
-                            house.name,
-                            `${guestFirstName} ${guestLastName}`,
-                            new Date(startDate).toLocaleDateString(),
-                            new Date(endDate).toLocaleDateString(),
-                            totalPrice,
-                            true
-                        );
-                        await sendBookingNotificationSMS(phone, message);
-                    }
+                if (phone) {
+                    const message = formatBookingMessage(
+                        house.name,
+                        `${guestFirstName} ${guestLastName}`,
+                        new Date(startDate).toLocaleDateString(),
+                        new Date(endDate).toLocaleDateString(),
+                        totalPrice,
+                        true
+                    );
+                    await sendBookingNotificationSMS(phone, message);
+                    // Visual feedback for the admin usage
+                    alert(`[System Mock] SMS Sent to Admin (${phone}):\n${message}`);
+                } else {
+                    console.warn("Notification phone number not set in Settings.");
                 }
             } catch (err) {
                 console.error("Failed to send booking SMS:", err);
