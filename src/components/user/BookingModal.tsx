@@ -11,6 +11,7 @@ import { calculateBookingPrice, type BookingPriceBreakdown } from "@/lib/utils";
 import { getDoc, doc } from "firebase/firestore"; // Import doc & getDoc
 import { ResortSettings } from "@/types";
 import { sendBookingNotificationSMS, formatBookingMessage } from "@/lib/sms";
+import LoginModal from "@/components/auth/LoginModal";
 
 interface BookingModalProps {
     house: House;
@@ -36,6 +37,16 @@ export default function BookingModal({
     const [loading, setLoading] = useState(false);
     const [success, setSuccess] = useState(false);
     const [error, setError] = useState("");
+    const [showLogin, setShowLogin] = useState(false);
+    const [pendingBookingSubmit, setPendingBookingSubmit] = useState(false);
+
+    // Auto-submit after login if pending
+    useEffect(() => {
+        if (user && pendingBookingSubmit) {
+            submitBooking();
+            setPendingBookingSubmit(false);
+        }
+    }, [user, pendingBookingSubmit]);
 
     useEffect(() => {
         if (startDate && endDate) {
@@ -62,13 +73,19 @@ export default function BookingModal({
         }
     }, [startDate, endDate, house]);
 
-    const handleBooking = async (e: React.FormEvent) => {
-        e.preventDefault();
+    const handleBooking = async (e?: React.FormEvent) => {
+        if (e) e.preventDefault();
 
         if (!user) {
-            router.push("/login");
+            setPendingBookingSubmit(true);
+            setShowLogin(true);
             return;
         }
+        submitBooking();
+    };
+
+    const submitBooking = async () => {
+        if (!user) return; // Should be handled, but typescript check
 
         if (!priceBreakdown || priceBreakdown.totalPrice <= 0) {
             setError("Огноо зөв сонгоно уу.");
@@ -270,6 +287,12 @@ export default function BookingModal({
                     </button>
                 </form>
             </div>
+
+            <LoginModal
+                isOpen={showLogin}
+                onClose={() => { setShowLogin(false); setPendingBookingSubmit(false); }}
+                onSuccess={() => setShowLogin(false)}
+            />
         </div>
     );
 }
