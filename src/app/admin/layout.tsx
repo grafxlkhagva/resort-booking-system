@@ -46,6 +46,7 @@ export default function AdminLayout({
     const navItems = [
         { href: "/admin", label: "Самбар", icon: Home },
         { href: "/admin/bookings", label: "Захиалгууд", icon: Calendar },
+        { href: "/admin/operations", label: "Housekeeping", icon: Settings }, // Using Settings temporarily as icon or import broom/clipboard
         { href: "/admin/users", label: "Хэрэглэгчид", icon: Users },
         { href: "/admin/settings", label: "Тохиргоо", icon: Settings },
     ];
