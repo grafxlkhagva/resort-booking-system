@@ -5,7 +5,7 @@ import { X, Calendar, User, Phone, Mail, DollarSign, FileText, PenTool } from "l
 import { addDoc, collection, updateDoc, doc } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import { House, Booking, ResortSettings } from "@/types";
-import { sendBookingNotificationSMS, formatBookingMessage } from "@/lib/sms";
+import { sendTelegramNotification, formatTelegramBookingMessage } from "@/lib/telegram"; // Import Telegram service
 import { getDoc } from "firebase/firestore";
 
 interface QuickBookingModalProps {
@@ -106,33 +106,26 @@ export default function QuickBookingModal({ isOpen, onClose, houses, preSelected
                     }
                 });
             }
-
-            // Send SMS if enabled
+            // Send Telegram Notification
             try {
-                const settingsDoc = await getDoc(doc(db, "settings", "general"));
-                let phone = "";
-                if (settingsDoc.exists()) {
-                    const settings = settingsDoc.data() as ResortSettings;
-                    phone = settings.bookingControl?.notificationPhone || "";
-                }
+                // We don't necessarily need settings for Telegram as CHAT_ID is hardcoded/env based for now based on user request.
+                // But if we wanted to make it dynamic later, we could fetch CHAT_ID from settings.
+                // For now, simply send to the configured bot admin.
 
-                if (phone) {
-                    const message = formatBookingMessage(
-                        house.name,
-                        `${guestFirstName} ${guestLastName}`,
-                        new Date(startDate).toLocaleDateString(),
-                        new Date(endDate).toLocaleDateString(),
-                        totalPrice,
-                        true
-                    );
-                    await sendBookingNotificationSMS(phone, message);
-                    // Visual feedback for the admin usage
-                    alert(`[System Mock] SMS Sent to Admin (${phone}):\n${message}`);
-                } else {
-                    console.warn("Notification phone number not set in Settings.");
-                }
+                const message = formatTelegramBookingMessage(
+                    house.name,
+                    `${guestFirstName} ${guestLastName}`,
+                    guestPhone,
+                    new Date(startDate).toLocaleDateString(),
+                    new Date(endDate).toLocaleDateString(),
+                    totalPrice,
+                    true
+                );
+
+                await sendTelegramNotification(message);
+
             } catch (err) {
-                console.error("Failed to send booking SMS:", err);
+                console.error("Failed to send Telegram notification:", err);
             }
 
             setSuccess("Захиалга амжилттай үүсгэгдлээ!");

@@ -10,7 +10,7 @@ import { X, Check, Calendar, Users as UsersIcon } from "lucide-react";
 import { calculateBookingPrice, type BookingPriceBreakdown } from "@/lib/utils";
 import { getDoc, doc } from "firebase/firestore"; // Import doc & getDoc
 import { ResortSettings } from "@/types";
-import { sendBookingNotificationSMS, formatBookingMessage } from "@/lib/sms";
+import { sendTelegramNotification, formatTelegramBookingMessage } from "@/lib/telegram"; // Import Telegram
 import LoginModal from "@/components/auth/LoginModal";
 
 interface BookingModalProps {
@@ -115,31 +115,24 @@ export default function BookingModal({
 
             setSuccess(true);
 
-            // Send Notification SMS to Admin
+            // Send Notification Telegram to Admin
             try {
-                const settingsDoc = await getDoc(doc(db, "settings", "general"));
-                let phone = "";
-                if (settingsDoc.exists()) {
-                    const settings = settingsDoc.data() as ResortSettings;
-                    phone = settings.bookingControl?.notificationPhone || "";
-                }
+                // Fetch settings if we wanted dynamic handling, but we have hardcoded ChatID for now as requested.
+                // We will just send it.
 
-                if (phone) {
-                    const message = formatBookingMessage(
-                        house.name,
-                        user.displayName || user.email || "Зочин",
-                        new Date(startDate).toLocaleDateString(),
-                        new Date(endDate).toLocaleDateString(),
-                        priceBreakdown.totalPrice
-                    );
-                    await sendBookingNotificationSMS(phone, message);
-                    // For user facing modal, we might just log to console or show a small toast, but avoiding alert as it interrupts flow.
-                    console.log(`[Mock SMS] Admin notified at ${phone}`);
-                } else {
-                    console.log("[Mock SMS] No admin phone configured.");
-                }
+                const message = formatTelegramBookingMessage(
+                    house.name,
+                    user.displayName || user.email || "Зочин",
+                    user.phoneNumber || "Утасгүй",
+                    new Date(startDate).toLocaleDateString(),
+                    new Date(endDate).toLocaleDateString(),
+                    priceBreakdown.totalPrice
+                );
+
+                await sendTelegramNotification(message);
+
             } catch (err) {
-                console.error("Failed to send notification SMS", err);
+                console.error("Failed to send notification Telegram", err);
             }
 
             // Auto redirect after 2 seconds
