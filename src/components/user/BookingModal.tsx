@@ -117,7 +117,7 @@ export default function BookingModal({
 
             // Send Notification Telegram to Admin
             try {
-                await sendBookingNotification(
+                const notifResult = await sendBookingNotification(
                     house.name,
                     user.displayName || user.email || "Зочин",
                     user.phoneNumber || "Утасгүй",
@@ -126,8 +126,12 @@ export default function BookingModal({
                     priceBreakdown.totalPrice,
                     false
                 );
+
+                if (!notifResult.success) {
+                    console.error("Failed to send Telegram notification:", notifResult.error);
+                }
             } catch (err) {
-                console.error("Failed to send notification Telegram", err);
+                console.error("Error executing sendBookingNotification:", err);
             }
 
             // Auto redirect after 2 seconds
