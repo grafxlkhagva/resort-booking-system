@@ -1,4 +1,4 @@
-```javascript
+
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
@@ -122,12 +122,12 @@ export default function HouseOperationsPage() {
 
             let details = "";
             if (checkIns > 0) {
-                details += "\n📥 <b>Ирэх (" + checkIns + "):</b>\n" + 
-                           getCheckIns().map(b => " - " + b.houseName + ": " + (b.guestDetails?.firstName || 'Guest') + " (" + (b.guestDetails?.phoneNumber || '-') + ")").join("\n");
+                details += "\n📥 <b>Ирэх (" + checkIns + "):</b>\n" +
+                    getCheckIns().map(b => " - " + b.houseName + ": " + (b.guestDetails?.firstName || 'Guest') + " (" + (b.guestDetails?.phoneNumber || '-') + ")").join("\n");
             }
             if (checkOuts > 0) {
-                details += "\n\n📤 <b>Явах (" + checkOuts + "):</b>\n" + 
-                           getCheckOuts().map(b => " - " + b.houseName + ": " + (b.guestDetails?.firstName || 'Guest')).join("\n");
+                details += "\n\n📤 <b>Явах (" + checkOuts + "):</b>\n" +
+                    getCheckOuts().map(b => " - " + b.houseName + ": " + (b.guestDetails?.firstName || 'Guest')).join("\n");
             }
 
             if (!details) details = "Өнөөдөр онцлох хөдөлгөөн байхгүй байна.";
@@ -240,11 +240,10 @@ export default function HouseOperationsPage() {
                                 <button
                                     onClick={() => updateStatus(house.id, status === 'maintenance' ? 'clean' : 'maintenance')}
                                     disabled={updatingId === house.id}
-                                    className={`col - span - 2 text - xs py - 1 px - 2 rounded border transition - colors mt - 1 ${
-    status === 'maintenance'
-        ? 'bg-white text-green-600 border-green-200 hover:bg-green-50'
-        : 'bg-white text-gray-400 border-gray-100 hover:bg-gray-50 hover:text-gray-600'
-} `}
+                                    className={`col-span-2 text-xs py-1 px-2 rounded border transition-colors mt-1 ${status === 'maintenance'
+                                            ? 'bg-white text-green-600 border-green-200 hover:bg-green-50'
+                                            : 'bg-white text-gray-400 border-gray-100 hover:bg-gray-50 hover:text-gray-600'
+                                        }`}
                                 >
                                     {status === 'maintenance' ? 'Засвар дууссан' : 'Засварт оруулах'}
                                 </button>
@@ -270,7 +269,7 @@ export default function HouseOperationsPage() {
                 </div>
 
                 <div className="flex items-center space-x-2">
-                     <button 
+                    <button
                         onClick={handleSendReport}
                         disabled={sendingReport}
                         className="flex items-center px-4 py-2 bg-blue-50 text-blue-700 rounded-lg hover:bg-blue-100 transition-colors"
