@@ -12,6 +12,9 @@ import Link from "next/link";
 import { format, isSameDay, parseISO, startOfDay, endOfDay } from "date-fns";
 import { sendDailyReport } from "@/lib/telegram";
 
+// Vercel Rebuild Trigger
+
+
 const STATUS_LABELS: Record<HouseStatus, string> = {
     clean: "Цэвэр",
     dirty: "Бохир",
