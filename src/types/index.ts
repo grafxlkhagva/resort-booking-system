@@ -77,6 +77,8 @@ export interface Booking {
     guestCount: number;
     paymentType?: 'full' | 'partial' | 'barter' | 'custom'; // New for manual/barter types
     barterDescription?: string | null; // For barter details
+    checkInDate?: Date; // Added for operations view (client-side converted)
+    checkOutDate?: Date; // Added for operations view (client-side converted)
 }
 
 export interface ResortSettings {
