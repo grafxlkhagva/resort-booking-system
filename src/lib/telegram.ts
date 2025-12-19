@@ -76,12 +76,15 @@ ${type}
 <i>Системд бүртгэгдлээ.</i>
     `.trim();
 
-    const buttons = [
-        [
-            { text: "📞 Залгах", url: `tel:+976${cleanPhone}` }, // Add country code if missing
-            { text: "🔗 Систем рүү орох", url: `${SYSTEM_URL}/admin/bookings` }
-        ]
-    ];
+    const buttons: InlineButton[][] = [];
+    const row: InlineButton[] = [];
+
+    if (cleanPhone && cleanPhone.length > 4) { // Basic validation
+        row.push({ text: "📞 Залгах", url: `tel:+976${cleanPhone}` });
+    }
+
+    row.push({ text: "🔗 Систем рүү орох", url: `${SYSTEM_URL}/admin/bookings` });
+    buttons.push(row);
 
     return await sendTelegramMessage(message, buttons);
 };
