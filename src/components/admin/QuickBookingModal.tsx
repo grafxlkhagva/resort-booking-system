@@ -5,7 +5,7 @@ import { X, Calendar, User, Phone, Mail, DollarSign, FileText, PenTool } from "l
 import { addDoc, collection, updateDoc, doc } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import { House, Booking, ResortSettings } from "@/types";
-import { sendTelegramNotification, formatTelegramBookingMessage } from "@/lib/telegram"; // Import Telegram service
+import { sendBookingNotification } from "@/lib/telegram"; // Updated import
 import { getDoc } from "firebase/firestore";
 
 interface QuickBookingModalProps {
@@ -108,11 +108,7 @@ export default function QuickBookingModal({ isOpen, onClose, houses, preSelected
             }
             // Send Telegram Notification
             try {
-                // We don't necessarily need settings for Telegram as CHAT_ID is hardcoded/env based for now based on user request.
-                // But if we wanted to make it dynamic later, we could fetch CHAT_ID from settings.
-                // For now, simply send to the configured bot admin.
-
-                const message = formatTelegramBookingMessage(
+                await sendBookingNotification(
                     house.name,
                     `${guestFirstName} ${guestLastName}`,
                     guestPhone,
@@ -121,9 +117,6 @@ export default function QuickBookingModal({ isOpen, onClose, houses, preSelected
                     totalPrice,
                     true
                 );
-
-                await sendTelegramNotification(message);
-
             } catch (err) {
                 console.error("Failed to send Telegram notification:", err);
             }

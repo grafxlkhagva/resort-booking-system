@@ -1,13 +1,16 @@
+```javascript
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
-import { collection, onSnapshot, doc, updateDoc } from "firebase/firestore";
+import { collection, onSnapshot, doc, updateDoc, query, getDocs, where, orderBy } from "firebase/firestore";
 import { db } from "@/lib/firebase";
-import { House, HouseStatus } from "@/types";
+import { House, HouseStatus, Booking } from "@/types";
 import { useAuth } from "@/contexts/AuthContext";
-import { ArrowLeft, CheckCircle, XCircle, Clock, Home, PenTool, RefreshCw } from "lucide-react";
+import { ArrowLeft, CheckCircle, XCircle, Clock, Home, PenTool, RefreshCw, Send, Calendar as CalendarIcon } from "lucide-react";
 import Link from "next/link";
+import { format, isSameDay, parseISO, startOfDay, endOfDay } from "date-fns";
+import { sendDailyReport } from "@/lib/telegram";
 
 const STATUS_LABELS: Record<HouseStatus, string> = {
     clean: "Цэвэр",
@@ -29,13 +32,39 @@ export default function HouseOperationsPage() {
     const { user, isAdmin, loading } = useAuth();
     const router = useRouter();
     const [houses, setHouses] = useState<House[]>([]);
+    const [bookings, setBookings] = useState<Booking[]>([]);
     const [updatingId, setUpdatingId] = useState<string | null>(null);
+    const [filterDate, setFilterDate] = useState(new Date());
+    const [sendingReport, setSendingReport] = useState(false);
+
+    const fetchData = useCallback(async () => {
+        if (!isAdmin) return;
+
+        try {
+            const bookingsRef = collection(db, "bookings");
+            const q = query(bookingsRef, orderBy("checkInDate", "asc"));
+            const querySnapshot = await getDocs(q);
+            const bookingsData = querySnapshot.docs.map(doc => ({
+                id: doc.id,
+                ...doc.data(),
+                checkInDate: doc.data().checkInDate.toDate(),
+                checkOutDate: doc.data().checkOutDate.toDate(),
+            })) as Booking[];
+            setBookings(bookingsData);
+        } catch (error) {
+            console.error("Error fetching bookings:", error);
+        }
+    }, [isAdmin]);
 
     useEffect(() => {
         if (!loading && (!user || !isAdmin)) {
             router.push("/");
         }
     }, [user, isAdmin, loading, router]);
+
+    useEffect(() => {
+        fetchData();
+    }, [filterDate, fetchData]);
 
     // Real-time listener for house statuses
     useEffect(() => {
@@ -53,6 +82,65 @@ export default function HouseOperationsPage() {
 
         return () => unsubscribe();
     }, [isAdmin]);
+
+    const getCheckIns = () => {
+        const start = startOfDay(filterDate);
+        const end = endOfDay(filterDate);
+        return bookings.filter(booking =>
+            booking.checkInDate >= start && booking.checkInDate <= end
+        );
+    };
+
+    const getCheckOuts = () => {
+        const start = startOfDay(filterDate);
+        const end = endOfDay(filterDate);
+        return bookings.filter(booking =>
+            booking.checkOutDate >= start && booking.checkOutDate <= end
+        );
+    };
+
+    const getStayovers = () => {
+        const start = startOfDay(filterDate);
+        return bookings.filter(booking =>
+            booking.checkInDate < start && booking.checkOutDate > start
+        );
+    };
+
+    const handleSendReport = async () => {
+        setSendingReport(true);
+        try {
+            // Calculate stats for the filtered date (usually today)
+            const checkIns = getCheckIns().length;
+            const checkOuts = getCheckOuts().length;
+            const occupied = getStayovers().length + checkIns; // Rough estimate
+
+            // Calculate revenue (Checking in today)
+            const revenue = getCheckIns().reduce((acc, booking) => acc + (booking.totalPrice || 0), 0);
+
+            let details = "";
+            if (checkIns > 0) details += `\n📥 <b>Ирэх (${checkIns}):</b>\n` + getCheckIns().map(b => ` - ${ b.houseName }: ${ b.guestDetails?.firstName || 'Guest' } (${ b.guestDetails?.phoneNumber || '-' })`).join('\n');
+            if (checkOuts > 0) details += `\n\n📤 <b>Явах (${checkOuts}):</b>\n` + getCheckOuts().map(b => ` - ${ b.houseName }: ${ b.guestDetails?.firstName || 'Guest' } `).join('\n');
+
+            if (!details) details = "Өнөөдөр онцлох хөдөлгөөн байхгүй байна.";
+
+            const success = await sendDailyReport({
+                checkIns,
+                checkOuts,
+                occupied,
+                revenue,
+                details
+            });
+
+            if (success) alert("Тайлан Telegram руу амжилттай илгээгдлээ!");
+            else alert("Тайлан илгээхэд алдаа гарлаа.");
+
+        } catch (error) {
+            console.error(error);
+            alert("Алдаа гарлаа.");
+        } finally {
+            setSendingReport(false);
+        }
+    };
 
     const updateStatus = async (houseId: string, newStatus: HouseStatus) => {
         setUpdatingId(houseId);
@@ -143,10 +231,11 @@ export default function HouseOperationsPage() {
                                 <button
                                     onClick={() => updateStatus(house.id, status === 'maintenance' ? 'clean' : 'maintenance')}
                                     disabled={updatingId === house.id}
-                                    className={`col-span-2 text-xs py-1 px-2 rounded border transition-colors mt-1 ${status === 'maintenance'
-                                            ? 'bg-white text-green-600 border-green-200 hover:bg-green-50'
-                                            : 'bg-white text-gray-400 border-gray-100 hover:bg-gray-50 hover:text-gray-600'
-                                        }`}
+                                    className={`col - span - 2 text - xs py - 1 px - 2 rounded border transition - colors mt - 1 ${
+    status === 'maintenance'
+        ? 'bg-white text-green-600 border-green-200 hover:bg-green-50'
+        : 'bg-white text-gray-400 border-gray-100 hover:bg-gray-50 hover:text-gray-600'
+} `}
                                 >
                                     {status === 'maintenance' ? 'Засвар дууссан' : 'Засварт оруулах'}
                                 </button>
@@ -171,8 +260,24 @@ export default function HouseOperationsPage() {
                     </div>
                 </div>
 
-                <div className="flex space-x-2">
-                    {/* Filter or extra actions can go here */}
+                <div className="flex items-center space-x-2">
+                     <button 
+                        onClick={handleSendReport}
+                        disabled={sendingReport}
+                        className="flex items-center px-4 py-2 bg-blue-50 text-blue-700 rounded-lg hover:bg-blue-100 transition-colors"
+                    >
+                        <Send size={18} className="mr-2" />
+                        {sendingReport ? "Илгээж байна..." : "Telegram руу илгээх"}
+                    </button>
+                    <div className="relative">
+                        <CalendarIcon className="absolute left-3 top-2.5 text-gray-400" size={18} />
+                        <input
+                            type="date"
+                            value={format(filterDate, 'yyyy-MM-dd')}
+                            onChange={(e) => setFilterDate(new Date(e.target.value))}
+                            className="pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+                        />
+                    </div>
                 </div>
             </div>
 

@@ -10,7 +10,7 @@ import { X, Check, Calendar, Users as UsersIcon } from "lucide-react";
 import { calculateBookingPrice, type BookingPriceBreakdown } from "@/lib/utils";
 import { getDoc, doc } from "firebase/firestore"; // Import doc & getDoc
 import { ResortSettings } from "@/types";
-import { sendTelegramNotification, formatTelegramBookingMessage } from "@/lib/telegram"; // Import Telegram
+import { sendBookingNotification } from "@/lib/telegram"; // Updated import
 import LoginModal from "@/components/auth/LoginModal";
 
 interface BookingModalProps {
@@ -117,20 +117,15 @@ export default function BookingModal({
 
             // Send Notification Telegram to Admin
             try {
-                // Fetch settings if we wanted dynamic handling, but we have hardcoded ChatID for now as requested.
-                // We will just send it.
-
-                const message = formatTelegramBookingMessage(
+                await sendBookingNotification(
                     house.name,
                     user.displayName || user.email || "Зочин",
                     user.phoneNumber || "Утасгүй",
                     new Date(startDate).toLocaleDateString(),
                     new Date(endDate).toLocaleDateString(),
-                    priceBreakdown.totalPrice
+                    priceBreakdown.totalPrice,
+                    false
                 );
-
-                await sendTelegramNotification(message);
-
             } catch (err) {
                 console.error("Failed to send notification Telegram", err);
             }
