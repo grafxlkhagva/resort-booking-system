@@ -121,8 +121,14 @@ export default function HouseOperationsPage() {
             const revenue = getCheckIns().reduce((acc, booking) => acc + (booking.totalPrice || 0), 0);
 
             let details = "";
-            if (checkIns > 0) details += `\n📥 <b>Ирэх (${checkIns}):</b>\n` + getCheckIns().map(b => ` - ${ b.houseName }: ${ b.guestDetails?.firstName || 'Guest' } (${ b.guestDetails?.phoneNumber || '-' })`).join('\n');
-            if (checkOuts > 0) details += `\n\n📤 <b>Явах (${checkOuts}):</b>\n` + getCheckOuts().map(b => ` - ${ b.houseName }: ${ b.guestDetails?.firstName || 'Guest' } `).join('\n');
+            if (checkIns > 0) {
+                details += "\n📥 <b>Ирэх (" + checkIns + "):</b>\n" + 
+                           getCheckIns().map(b => " - " + b.houseName + ": " + (b.guestDetails?.firstName || 'Guest') + " (" + (b.guestDetails?.phoneNumber || '-') + ")").join("\n");
+            }
+            if (checkOuts > 0) {
+                details += "\n\n📤 <b>Явах (" + checkOuts + "):</b>\n" + 
+                           getCheckOuts().map(b => " - " + b.houseName + ": " + (b.guestDetails?.firstName || 'Guest')).join("\n");
+            }
 
             if (!details) details = "Өнөөдөр онцлох хөдөлгөөн байхгүй байна.";
 
