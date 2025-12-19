@@ -2,7 +2,7 @@
 // Telegram Notification Service
 
 const BOT_TOKEN = "8553346222:AAHQbUbK5dpipLd0Piu3EFSyhqf5kP1NPbQ";
-const CHAT_ID = "8553346222";
+const CHAT_ID = "771829630"; // Updated Admin Chat ID
 const SYSTEM_URL = "https://resort-booking-system-two.vercel.app"; // Replace with actual URL if different
 
 interface InlineButton {
