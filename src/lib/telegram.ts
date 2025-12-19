@@ -14,7 +14,7 @@ interface InlineButton {
 export const sendTelegramMessage = async (
     text: string,
     buttons?: InlineButton[][]
-): Promise<boolean> => {
+): Promise<{ success: boolean; error?: string }> => {
     try {
         const url = `https://api.telegram.org/bot${BOT_TOKEN}/sendMessage`;
 
@@ -40,13 +40,13 @@ export const sendTelegramMessage = async (
 
         if (!data.ok) {
             console.error("Telegram API Error:", data);
-            return false;
+            return { success: false, error: data.description || "Telegram API Error" };
         }
 
-        return true;
-    } catch (error) {
+        return { success: true };
+    } catch (error: any) {
         console.error("Failed to send Telegram notification:", error);
-        return false;
+        return { success: false, error: error.message || "Network Error" };
     }
 };
 
