@@ -93,7 +93,7 @@ export default function HouseOperationsPage() {
         const start = startOfDay(filterDate);
         const end = endOfDay(filterDate);
         return bookings.filter(booking =>
-            booking.checkInDate >= start && booking.checkInDate <= end
+            booking.checkInDate && booking.checkInDate >= start && booking.checkInDate <= end
         );
     };
 
@@ -101,13 +101,14 @@ export default function HouseOperationsPage() {
         const start = startOfDay(filterDate);
         const end = endOfDay(filterDate);
         return bookings.filter(booking =>
-            booking.checkOutDate >= start && booking.checkOutDate <= end
+            booking.checkOutDate && booking.checkOutDate >= start && booking.checkOutDate <= end
         );
     };
 
     const getStayovers = () => {
         const start = startOfDay(filterDate);
         return bookings.filter(booking =>
+            booking.checkInDate && booking.checkOutDate &&
             booking.checkInDate < start && booking.checkOutDate > start
         );
     };
