@@ -47,12 +47,15 @@ export default function HouseOperationsPage() {
             const bookingsRef = collection(db, "bookings");
             const q = query(bookingsRef, orderBy("checkInDate", "asc"));
             const querySnapshot = await getDocs(q);
-            const bookingsData = querySnapshot.docs.map(doc => ({
-                id: doc.id,
-                ...doc.data(),
-                checkInDate: doc.data().checkInDate.toDate(),
-                checkOutDate: doc.data().checkOutDate.toDate(),
-            })) as Booking[];
+            const bookingsData = querySnapshot.docs.map(doc => {
+                const data = doc.data();
+                return {
+                    id: doc.id,
+                    ...data,
+                    checkInDate: data.checkInDate?.toDate() || new Date(data.startDate), // Fallback if needed
+                    checkOutDate: data.checkOutDate?.toDate() || new Date(data.endDate),
+                } as unknown as Booking;
+            });
             setBookings(bookingsData);
         } catch (error) {
             console.error("Error fetching bookings:", error);
@@ -241,8 +244,8 @@ export default function HouseOperationsPage() {
                                     onClick={() => updateStatus(house.id, status === 'maintenance' ? 'clean' : 'maintenance')}
                                     disabled={updatingId === house.id}
                                     className={`col-span-2 text-xs py-1 px-2 rounded border transition-colors mt-1 ${status === 'maintenance'
-                                            ? 'bg-white text-green-600 border-green-200 hover:bg-green-50'
-                                            : 'bg-white text-gray-400 border-gray-100 hover:bg-gray-50 hover:text-gray-600'
+                                        ? 'bg-white text-green-600 border-green-200 hover:bg-green-50'
+                                        : 'bg-white text-gray-400 border-gray-100 hover:bg-gray-50 hover:text-gray-600'
                                         }`}
                                 >
                                     {status === 'maintenance' ? 'Засвар дууссан' : 'Засварт оруулах'}
