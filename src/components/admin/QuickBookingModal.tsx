@@ -5,7 +5,7 @@ import { X, Calendar, User, Phone, Mail, DollarSign, FileText, PenTool } from "l
 import { addDoc, collection, updateDoc, doc } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import { House, Booking, ResortSettings } from "@/types";
-import { sendBookingNotification } from "@/lib/telegram"; // Updated import
+import { sendBookingNotificationAction } from "@/actions/telegram"; // Updated import
 import { getDoc } from "firebase/firestore";
 
 interface QuickBookingModalProps {
@@ -106,9 +106,8 @@ export default function QuickBookingModal({ isOpen, onClose, houses, preSelected
                     }
                 });
             }
-            // Send Telegram Notification
             try {
-                await sendBookingNotification(
+                await sendBookingNotificationAction(
                     house.name,
                     `${guestFirstName} ${guestLastName}`,
                     guestPhone,

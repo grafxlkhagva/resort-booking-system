@@ -9,8 +9,8 @@ import { House, HouseStatus, Booking } from "@/types";
 import { useAuth } from "@/contexts/AuthContext";
 import { ArrowLeft, CheckCircle, XCircle, Clock, Home, PenTool, RefreshCw, Send, Calendar as CalendarIcon } from "lucide-react";
 import Link from "next/link";
-import { format, isSameDay, parseISO, startOfDay, endOfDay } from "date-fns";
-import { sendDailyReport } from "@/lib/telegram";
+import { format, startOfDay, endOfDay } from "date-fns";
+import { sendDailyReportAction } from "@/actions/telegram";
 
 // Vercel Rebuild Trigger
 
@@ -137,7 +137,7 @@ export default function HouseOperationsPage() {
 
             if (!details) details = "Өнөөдөр онцлох хөдөлгөөн байхгүй байна.";
 
-            const result = await sendDailyReport({
+            const result = await sendDailyReportAction({
                 checkIns,
                 checkOuts,
                 occupied,
@@ -246,8 +246,8 @@ export default function HouseOperationsPage() {
                                     onClick={() => updateStatus(house.id, status === 'maintenance' ? 'clean' : 'maintenance')}
                                     disabled={updatingId === house.id}
                                     className={`col-span-2 text-xs py-1 px-2 rounded border transition-colors mt-1 ${status === 'maintenance'
-                                            ? 'bg-white text-green-600 border-green-200 hover:bg-green-50'
-                                            : 'bg-white text-gray-400 border-gray-100 hover:bg-gray-50 hover:text-gray-600'
+                                        ? 'bg-white text-green-600 border-green-200 hover:bg-green-50'
+                                        : 'bg-white text-gray-400 border-gray-100 hover:bg-gray-50 hover:text-gray-600'
                                         }`}
                                 >
                                     {status === 'maintenance' ? 'Засвар дууссан' : 'Засварт оруулах'}

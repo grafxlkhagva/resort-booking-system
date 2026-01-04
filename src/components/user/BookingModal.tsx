@@ -9,8 +9,8 @@ import { db } from "@/lib/firebase";
 import { X, Check, Calendar, Users as UsersIcon } from "lucide-react";
 import { calculateBookingPrice, type BookingPriceBreakdown } from "@/lib/utils";
 import { getDoc, doc } from "firebase/firestore"; // Import doc & getDoc
+import { sendBookingNotificationAction } from "@/actions/telegram"; // Use Server Action instead of client lib
 import { ResortSettings } from "@/types";
-import { sendBookingNotification } from "@/lib/telegram"; // Updated import
 import LoginModal from "@/components/auth/LoginModal";
 
 interface BookingModalProps {
@@ -115,9 +115,8 @@ export default function BookingModal({
 
             setSuccess(true);
 
-            // Send Notification Telegram to Admin
             try {
-                const notifResult = await sendBookingNotification(
+                const notifResult = await sendBookingNotificationAction(
                     house.name,
                     user.displayName || user.email || "Зочин",
                     user.phoneNumber || "Утасгүй",
