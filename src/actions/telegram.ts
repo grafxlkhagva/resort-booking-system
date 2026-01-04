@@ -1,9 +1,10 @@
 "use server";
 
+import { db } from "@/lib/firebase";
+import { doc, getDoc } from "firebase/firestore";
+
 // Telegram Notification Server Actions
 
-const BOT_TOKEN = "8553346222:AAHQbUbK5dpipLd0Piu3EFSyhqf5kP1NPbQ";
-const CHAT_ID = "771829630";
 const SYSTEM_URL = "https://resort-booking-system-two.vercel.app";
 
 interface InlineButton {
@@ -17,10 +18,26 @@ export async function sendTelegramMessageAction(
     buttons?: InlineButton[][]
 ): Promise<{ success: boolean; error?: string }> {
     try {
-        const url = `https://api.telegram.org/bot${BOT_TOKEN}/sendMessage`;
+        // Fetch settings from Firestore
+        const settingsRef = doc(db, "settings", "general");
+        const settingsSnap = await getDoc(settingsRef);
+
+        if (!settingsSnap.exists()) {
+            return { success: false, error: "Settings not found" };
+        }
+
+        const settings = settingsSnap.data();
+        const telegram = settings.telegram;
+
+        if (!telegram || !telegram.isActive || !telegram.botToken || !telegram.chatId) {
+            console.log("Telegram notification is disabled or not configured.");
+            return { success: true }; // Return success to not block the main flow
+        }
+
+        const url = `https://api.telegram.org/bot${telegram.botToken}/sendMessage`;
 
         const body: any = {
-            chat_id: CHAT_ID,
+            chat_id: telegram.chatId,
             text: text,
             parse_mode: 'HTML'
         };

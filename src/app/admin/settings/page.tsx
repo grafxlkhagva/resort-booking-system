@@ -7,7 +7,7 @@ import { db, storage } from "@/lib/firebase";
 import { doc, getDoc, setDoc } from "firebase/firestore";
 import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
 import { ResortSettings } from "@/types";
-import { Save, MapPin, Phone, Mail, Map as MapIcon, Image as ImageIcon, Palette, Calendar, CheckCircle } from "lucide-react";
+import { Save, MapPin, Phone, Mail, Map as MapIcon, Image as ImageIcon, Palette, Calendar, CheckCircle, Send, MessageSquare, Info, ChevronDown, ChevronUp } from "lucide-react";
 
 import AdminPhoneVerificationModal from "@/components/admin/AdminPhoneVerificationModal";
 
@@ -17,6 +17,7 @@ export default function SettingsPage() {
     const [loading, setLoading] = useState(true);
     const [saving, setSaving] = useState(false);
     const [showPhoneVerify, setShowPhoneVerify] = useState(false);
+    const [showTelegramGuide, setShowTelegramGuide] = useState(false);
 
     const [coverImageFile, setCoverImageFile] = useState<File | null>(null);
     const [logoFile, setLogoFile] = useState<File | null>(null);
@@ -43,6 +44,11 @@ export default function SettingsPage() {
             logoUrl: "",
             showLogo: false,
             showName: true
+        },
+        telegram: {
+            botToken: "",
+            chatId: "",
+            isActive: false
         }
     });
 
@@ -73,6 +79,11 @@ export default function SettingsPage() {
                         social: {
                             facebook: data.social?.facebook || prev.social?.facebook || "",
                             instagram: data.social?.instagram || prev.social?.instagram || ""
+                        },
+                        telegram: {
+                            botToken: data.telegram?.botToken || prev.telegram?.botToken || "",
+                            chatId: data.telegram?.chatId || prev.telegram?.chatId || "",
+                            isActive: data.telegram?.isActive ?? prev.telegram?.isActive ?? false
                         }
                     }));
                 }
@@ -540,6 +551,98 @@ export default function SettingsPage() {
                                 onChange={(e) => setSettings({ ...settings, contact: { ...settings.contact, address: e.target.value } })}
                                 placeholder="Тэрэлж, Горхи, Улаанбаатар"
                             />
+                        </div>
+                    </div>
+                </div>
+
+                {/* Telegram Settings */}
+                <div className="bg-white shadow rounded-lg p-6 border-l-4 border-blue-400">
+                    <div className="flex items-center justify-between mb-4">
+                        <div className="flex items-center">
+                            <Send className="text-blue-500 mr-2" />
+                            <h2 className="text-xl font-semibold text-gray-900">Telegram Мэдэгдэл</h2>
+                        </div>
+                        <div className="flex items-center">
+                            <label className="mr-3 text-sm font-medium text-gray-700">Идэвхжүүлэх</label>
+                            <input
+                                type="checkbox"
+                                className="h-5 w-5 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+                                checked={settings.telegram?.isActive || false}
+                                onChange={(e) => setSettings({
+                                    ...settings,
+                                    telegram: { ...(settings.telegram || { botToken: "", chatId: "", isActive: false }), isActive: e.target.checked }
+                                })}
+                            />
+                        </div>
+                    </div>
+
+                    <div className="space-y-4">
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <div>
+                                <label className="block text-sm font-medium text-gray-700">Bot Token</label>
+                                <input
+                                    type="password"
+                                    className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm border p-2"
+                                    value={settings.telegram?.botToken || ""}
+                                    onChange={(e) => setSettings({
+                                        ...settings,
+                                        telegram: { ...(settings.telegram || { botToken: "", chatId: "", isActive: false }), botToken: e.target.value }
+                                    })}
+                                    placeholder="8553346222:AAHQ..."
+                                />
+                            </div>
+                            <div>
+                                <label className="block text-sm font-medium text-gray-700">Admin Chat ID</label>
+                                <input
+                                    type="text"
+                                    className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm border p-2"
+                                    value={settings.telegram?.chatId || ""}
+                                    onChange={(e) => setSettings({
+                                        ...settings,
+                                        telegram: { ...(settings.telegram || { botToken: "", chatId: "", isActive: false }), chatId: e.target.value }
+                                    })}
+                                    placeholder="771829630"
+                                />
+                            </div>
+                        </div>
+
+                        {/* Telegram Guide Accordion */}
+                        <div className="mt-4 border border-blue-100 rounded-md overflow-hidden">
+                            <button
+                                type="button"
+                                onClick={() => setShowTelegramGuide(!showTelegramGuide)}
+                                className="w-full flex items-center justify-between p-3 bg-blue-50 text-blue-700 hover:bg-blue-100 transition-colors"
+                            >
+                                <div className="flex items-center text-sm font-semibold">
+                                    <Info size={16} className="mr-2" />
+                                    Telegram Бот хэрхэн тохируулах вэ?
+                                </div>
+                                {showTelegramGuide ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
+                            </button>
+
+                            {showTelegramGuide && (
+                                <div className="p-4 bg-white text-sm text-gray-600 space-y-3 border-t border-blue-100">
+                                    <div className="flex items-start">
+                                        <span className="bg-blue-100 text-blue-700 rounded-full w-5 h-5 flex items-center justify-center text-xs font-bold mr-2 mt-0.5 shrink-0">1</span>
+                                        <p>Telegram-аас <b>@BotFather</b>-г хайж олоод <code>/newbot</code> гэж бичин шинэ бот үүсгэнэ.</p>
+                                    </div>
+                                    <div className="flex items-start">
+                                        <span className="bg-blue-100 text-blue-700 rounded-full w-5 h-5 flex items-center justify-center text-xs font-bold mr-2 mt-0.5 shrink-0">2</span>
+                                        <p>Бот үүссэний дараа өгөгдсөн <b>HTTP API Token</b>-г хуулж аваад дээрх "Bot Token" хэсэгт оруулна.</p>
+                                    </div>
+                                    <div className="flex items-start">
+                                        <span className="bg-blue-100 text-blue-700 rounded-full w-5 h-5 flex items-center justify-center text-xs font-bold mr-2 mt-0.5 shrink-0">3</span>
+                                        <p>Үүсгэсэн бот руугаа ороод <b>Start</b> товчийг дарна.</p>
+                                    </div>
+                                    <div className="flex items-start">
+                                        <span className="bg-blue-100 text-blue-700 rounded-full w-5 h-5 flex items-center justify-center text-xs font-bold mr-2 mt-0.5 shrink-0">4</span>
+                                        <p>Өөрийн <b>Chat ID</b>-г авахын тулд <b>@userinfobot</b>-той чатлаж өөрийн ID-г аваад "Admin Chat ID" хэсэгт оруулна.</p>
+                                    </div>
+                                    <p className="bg-yellow-50 p-2 rounded text-xs text-yellow-800 border border-yellow-100 mt-2">
+                                        Мэдэгдэл хүлээн авахын тулд таны бот заавал <b>Active</b> байх ёстойг анхаарна уу.
+                                    </p>
+                                </div>
+                            )}
                         </div>
                     </div>
                 </div>

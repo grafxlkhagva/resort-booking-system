@@ -114,7 +114,12 @@ export interface ResortSettings {
         blockEndDate?: number;
         notificationPhone?: string;
         notificationPhoneVerified?: boolean;
-    }
+    };
+    telegram?: {
+        botToken: string;
+        chatId: string;
+        isActive: boolean;
+    };
 }
 
 export interface Review {
