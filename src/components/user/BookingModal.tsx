@@ -4,13 +4,11 @@ import { useState, useEffect } from "react";
 import { House } from "@/types";
 import { useAuth } from "@/contexts/AuthContext";
 import { useRouter } from "next/navigation";
-import { addDoc, collection } from "firebase/firestore";
+import { addDoc, collection, query, where, getDocs } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import { X, Check, Calendar, Users as UsersIcon } from "lucide-react";
 import { calculateBookingPrice, type BookingPriceBreakdown } from "@/lib/utils";
-import { getDoc, doc } from "firebase/firestore"; // Import doc & getDoc
-import { sendBookingNotificationAction } from "@/actions/telegram"; // Use Server Action instead of client lib
-import { ResortSettings } from "@/types";
+import { sendBookingNotificationAction } from "@/actions/telegram";
 import LoginModal from "@/components/auth/LoginModal";
 
 interface BookingModalProps {
@@ -101,6 +99,27 @@ export default function BookingModal({
         setError("");
 
         try {
+            const requestedStart = new Date(startDate).getTime();
+            const requestedEnd = new Date(endDate).getTime();
+
+            const q = query(
+                collection(db, "bookings"),
+                where("houseId", "==", house.id),
+                where("status", "in", ["pending", "confirmed"])
+            );
+            const snap = await getDocs(q);
+            const hasOverlap = snap.docs.some((d) => {
+                const b = d.data();
+                const s = b.startDate;
+                const e = b.endDate;
+                return s < requestedEnd && e > requestedStart;
+            });
+            if (hasOverlap) {
+                setError("Энэ хугацаанд байр боломжгүй байна. Өөр огноо сонгоно уу.");
+                setLoading(false);
+                return;
+            }
+
             await addDoc(collection(db, "bookings"), {
                 userId: user.uid,
                 houseId: house.id,
@@ -147,33 +166,26 @@ export default function BookingModal({
 
     if (success) {
         return (
-            <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-                <div className="bg-white rounded-lg max-w-md w-full p-8 relative text-center">
-                    <div className="mx-auto flex items-center justify-center h-16 w-16 rounded-full bg-green-100 mb-4">
-                        <Check className="h-8 w-8 text-green-600" />
+            <div className="fixed inset-0 modal-overlay flex items-end sm:items-center justify-center p-0 sm:p-4 z-50 safe-bottom">
+                <div className="card w-full sm:max-w-md rounded-t-2xl sm:rounded-2xl p-6 sm:p-8 text-center">
+                    <div className="mx-auto flex items-center justify-center h-14 w-14 rounded-full bg-green-100 text-green-600 mb-4">
+                        <Check className="h-7 w-7" />
                     </div>
-                    <h2 className="text-2xl font-bold text-gray-900 mb-2">Амжилттай!</h2>
-                    <p className="text-gray-600 mb-6">
+                    <h2 className="text-xl font-bold text-[var(--foreground)] mb-2">Амжилттай!</h2>
+                    <p className="text-[var(--muted)] mb-6">
                         Таны захиалга амжилттай илгээгдлээ. Админ баталгаажуулсны дараа мэдэгдэл ирнэ.
                     </p>
-                    <div className="bg-gray-50 rounded-lg p-4 mb-6">
-                        <div className="text-sm text-gray-600 mb-2">
-                            <Calendar className="inline w-4 h-4 mr-1" />
-                            {new Date(startDate).toLocaleDateString('mn-MN')} - {new Date(endDate).toLocaleDateString('mn-MN')}
+                    <div className="bg-[var(--background)] rounded-xl p-4 mb-6 text-left">
+                        <div className="text-sm text-[var(--muted)] flex items-center gap-2 mb-1">
+                            <Calendar size={16} /> {new Date(startDate).toLocaleDateString("mn-MN")} – {new Date(endDate).toLocaleDateString("mn-MN")}
                         </div>
-                        <div className="text-sm text-gray-600 mb-2">
-                            <UsersIcon className="inline w-4 h-4 mr-1" />
-                            {guestCount} зочин
+                        <div className="text-sm text-[var(--muted)] flex items-center gap-2 mb-2">
+                            <UsersIcon size={16} /> {guestCount} зочин
                         </div>
-                        <div className="text-lg font-bold text-indigo-600">
-                            ${priceBreakdown?.totalPrice}
-                        </div>
+                        <div className="text-lg font-bold text-[var(--primary)]">${priceBreakdown?.totalPrice}</div>
                     </div>
-                    <button
-                        onClick={() => router.push("/profile")}
-                        className="w-full bg-indigo-600 text-white py-2 px-4 rounded-md hover:bg-indigo-700 transition-colors"
-                    >
-                        Миний захиалгууд руу очих
+                    <button onClick={() => router.push("/profile")} className="btn-primary w-full">
+                        Миний захиалгууд руу
                     </button>
                 </div>
             </div>
@@ -181,103 +193,88 @@ export default function BookingModal({
     }
 
     return (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-            <div className="bg-white rounded-lg max-w-md w-full p-6 relative max-h-[90vh] overflow-y-auto">
+        <div className="fixed inset-0 modal-overlay flex items-end sm:items-center justify-center p-0 sm:p-4 z-50 safe-bottom">
+            <div className="card w-full sm:max-w-md rounded-t-2xl sm:rounded-2xl p-5 sm:p-6 relative max-h-[90vh] overflow-y-auto">
                 <button
                     onClick={onClose}
-                    className="absolute top-4 right-4 text-gray-400 hover:text-gray-500"
+                    className="absolute top-4 right-4 touch-target flex items-center justify-center text-[var(--muted)] hover:text-[var(--foreground)]"
+                    aria-label="Хаах"
                 >
-                    <X size={24} />
+                    <X size={22} />
                 </button>
 
-                <h2 className="text-2xl font-bold text-gray-900 mb-4">{house.name}-г захиалах</h2>
+                <h2 className="text-xl font-bold text-[var(--foreground)] mb-4 pr-10">{house.name} – захиалах</h2>
 
                 <form onSubmit={handleBooking} className="space-y-4">
                     <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-1">Ирэх өдөр</label>
+                        <label className="block text-sm font-medium text-[var(--foreground)] mb-1">Ирэх өдөр</label>
                         <input
                             type="date"
                             required
-                            className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm border p-2"
+                            className="w-full rounded-xl border border-[var(--border)] bg-[var(--card)] px-4 py-3 text-[var(--foreground)] focus:outline-none focus:ring-2 focus:ring-[var(--primary)] focus:border-transparent"
                             value={startDate}
                             onChange={(e) => setStartDate(e.target.value)}
                             min={new Date().toISOString().split("T")[0]}
                         />
                     </div>
-
                     <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-1">Буцах өдөр</label>
+                        <label className="block text-sm font-medium text-[var(--foreground)] mb-1">Буцах өдөр</label>
                         <input
                             type="date"
                             required
-                            className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm border p-2"
+                            className="w-full rounded-xl border border-[var(--border)] bg-[var(--card)] px-4 py-3 text-[var(--foreground)] focus:outline-none focus:ring-2 focus:ring-[var(--primary)] focus:border-transparent"
                             value={endDate}
                             onChange={(e) => setEndDate(e.target.value)}
                             min={startDate || new Date().toISOString().split("T")[0]}
                         />
                     </div>
-
                     <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-1">
-                            Зочид (Хамгийн ихдээ {house.capacity})
-                        </label>
+                        <label className="block text-sm font-medium text-[var(--foreground)] mb-1">Зочид (макс. {house.capacity})</label>
                         <input
                             type="number"
                             required
-                            min="1"
+                            min={1}
                             max={house.capacity}
-                            className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm border p-2"
+                            className="w-full rounded-xl border border-[var(--border)] bg-[var(--card)] px-4 py-3 text-[var(--foreground)] focus:outline-none focus:ring-2 focus:ring-[var(--primary)] focus:border-transparent"
                             value={guestCount}
                             onChange={(e) => setGuestCount(Number(e.target.value))}
                         />
                     </div>
 
                     {error && (
-                        <div className="p-3 bg-red-50 text-red-700 rounded-md text-sm">
+                        <div className="p-3 rounded-xl bg-red-50 text-red-700 text-sm border border-red-100">
                             {error}
                         </div>
                     )}
 
                     {priceBreakdown && priceBreakdown.totalDays > 0 && (
-                        <div className="pt-4 border-t border-gray-200 space-y-2">
-                            <div className="flex justify-between text-sm text-gray-600">
-                                <span>${house.price} x {priceBreakdown.totalDays} хоног</span>
+                        <div className="pt-4 border-t border-[var(--border)] space-y-2">
+                            <div className="flex justify-between text-sm text-[var(--muted)]">
+                                <span>${house.price} × {priceBreakdown.totalDays} хоног</span>
                                 <span>${priceBreakdown.basePrice}</span>
                             </div>
-
                             {priceBreakdown.discountedDays > 0 && (
-                                <>
-                                    <div className="flex justify-between text-sm text-gray-600">
-                                        <span className="text-green-600">
-                                            Хямдралтай өдрүүд ({priceBreakdown.discountedDays} хоног)
-                                        </span>
-                                        <span className="text-green-600">-${priceBreakdown.discountAmount}</span>
-                                    </div>
-                                </>
+                                <div className="flex justify-between text-sm text-green-600">
+                                    <span>Хямдрал ({priceBreakdown.discountedDays} хоног)</span>
+                                    <span>-${priceBreakdown.discountAmount}</span>
+                                </div>
                             )}
-
-                            <div className="flex justify-between text-lg font-bold text-gray-900 pt-2 border-t">
+                            <div className="flex justify-between font-bold text-[var(--foreground)] pt-2 border-t border-[var(--border)]">
                                 <span>Нийт</span>
-                                <span className={priceBreakdown.discountAmount > 0 ? "text-green-600" : ""}>
-                                    ${priceBreakdown.totalPrice}
-                                </span>
+                                <span className={priceBreakdown.discountAmount > 0 ? "text-green-600" : ""}>${priceBreakdown.totalPrice}</span>
                             </div>
-
                             {priceBreakdown.discountAmount > 0 && (
-                                <p className="text-xs text-green-600 text-center">
-                                    Та ${priceBreakdown.discountAmount} хэмнэлээ!
-                                </p>
+                                <p className="text-xs text-green-600 text-center">Та ${priceBreakdown.discountAmount} хэмнэлээ.</p>
                             )}
                         </div>
                     )}
 
-
                     <button
                         type="submit"
                         disabled={loading || !priceBreakdown || priceBreakdown.totalPrice <= 0}
-                        className="w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                        className="btn-primary w-full"
                     >
-                        {loading ? "Боловсруулж байна..." : "Захиалга Баталгаажуулах"}
+                        {loading ? "Боловсруулж байна…" : "Захиалга баталгаажуулах"}
                     </button>
                 </form>
             </div>

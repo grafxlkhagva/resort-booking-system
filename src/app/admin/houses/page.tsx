@@ -55,7 +55,7 @@ export default function ManageHouses() {
 
     const handleSave = async (data: Omit<House, "id" | "createdAt">) => {
         try {
-            const firestoreData = {
+            const baseData = {
                 name: data.name,
                 houseNumber: data.houseNumber,
                 description: data.description,
@@ -66,15 +66,14 @@ export default function ManageHouses() {
                 images: data.images || [],
                 amenities: data.amenities,
                 discount: data.discount,
-                createdAt: serverTimestamp(),
             };
 
             if (currentHouse) {
                 const houseRef = doc(db, "accommodations", currentHouse.id);
-                await updateDoc(houseRef, firestoreData);
+                await updateDoc(houseRef, baseData);
             } else {
                 const housesCollection = collection(db, "accommodations");
-                await addDoc(housesCollection, firestoreData);
+                await addDoc(housesCollection, { ...baseData, createdAt: serverTimestamp() });
             }
             alert("Амжилттай хадгалагдлаа!");
             setIsEditing(false);

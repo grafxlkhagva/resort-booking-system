@@ -4,288 +4,228 @@ import { useAuth } from "@/contexts/AuthContext";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
-import { Home, Calendar, Settings, Users, LogOut, PlusCircle, CheckCircle, XCircle, RefreshCw, PenTool } from "lucide-react";
-import { collection, onSnapshot, doc, updateDoc } from "firebase/firestore";
-import { db, auth } from "@/lib/firebase";
-import { House, HouseStatus } from "@/types";
-import QuickBookingModal from "@/components/admin/QuickBookingModal";
-import { signOut } from "firebase/auth";
+import {
+  Home,
+  Calendar,
+  UtensilsCrossed,
+  ClipboardList,
+  Users,
+  Settings,
+  ChevronRight,
+  ListOrdered,
+  ChefHat,
+  Link2,
+} from "lucide-react";
+import { collection, getDocs } from "firebase/firestore";
+import { db } from "@/lib/firebase";
 
-const STATUS_COLORS: Record<HouseStatus, string> = {
-    clean: "border-green-500 bg-green-50",
-    dirty: "border-red-500 bg-red-50",
-    cleaning: "border-yellow-500 bg-yellow-50",
-    occupied: "border-indigo-500 bg-indigo-50",
-    maintenance: "border-gray-500 bg-gray-50",
-};
+type HouseStatus = "clean" | "dirty" | "cleaning" | "occupied" | "maintenance";
 
-const STATUS_LABELS: Record<HouseStatus, string> = {
-    clean: "Цэвэр / Бэлэн",
-    dirty: "Бохир / Цэвэрлэх",
-    cleaning: "Цэвэрлэж байна",
-    occupied: "Хүнтэй",
-    maintenance: "Засвартай",
-};
+interface DashboardStats {
+  houses: { total: number; occupied: number; clean: number; dirty: number; cleaning: number; maintenance: number };
+  bookings: { total: number; pending: number; confirmed: number };
+  orders: { total: number; active: number };
+  menuItems: number;
+  users: number;
+}
 
 export default function AdminDashboard() {
-    const { user, isAdmin, loading } = useAuth();
-    const router = useRouter();
+  const { user, isAdmin, loading } = useAuth();
+  const router = useRouter();
+  const [stats, setStats] = useState<DashboardStats | null>(null);
+  const [loadingStats, setLoadingStats] = useState(true);
 
-    const [houses, setHouses] = useState<House[]>([]);
-    const [filterStatus, setFilterStatus] = useState<HouseStatus | 'all'>('all');
+  useEffect(() => {
+    if (!loading && (!user || !isAdmin)) {
+      router.push("/");
+    }
+  }, [user, isAdmin, loading, router]);
 
-    // Modal State
-    const [isBookingModalOpen, setIsBookingModalOpen] = useState(false);
-    const [selectedHouseId, setSelectedHouseId] = useState<string>("");
+  useEffect(() => {
+    if (!isAdmin) return;
 
-    // Quick Update State
-    const [updatingId, setUpdatingId] = useState<string | null>(null);
+    const fetch = async () => {
+      setLoadingStats(true);
+      try {
+        const [accSnap, bookSnap, ordersSnap, menuSnap, usersSnap] = await Promise.all([
+          getDocs(collection(db, "accommodations")),
+          getDocs(collection(db, "bookings")),
+          getDocs(collection(db, "orders")),
+          getDocs(collection(db, "menu_items")),
+          getDocs(collection(db, "users")),
+        ]);
 
-    useEffect(() => {
-        if (!loading && (!user || !isAdmin)) {
-            router.push("/");
-        }
-    }, [user, isAdmin, loading, router]);
-
-    // Real-time Houses Listener
-    useEffect(() => {
-        if (!isAdmin) return;
-
-        const unsubscribe = onSnapshot(collection(db, "accommodations"), (snapshot) => {
-            const housesData = snapshot.docs.map(doc => ({
-                id: doc.id,
-                ...doc.data(),
-                status: doc.data().status || 'clean'
-            })) as House[];
-            setHouses(housesData.sort((a, b) => a.houseNumber - b.houseNumber));
+        const houses = accSnap.docs.map((d) => ({ ...d.data(), status: (d.data().status as HouseStatus) || "clean" }));
+        const houseCounts = { total: houses.length, occupied: 0, clean: 0, dirty: 0, cleaning: 0, maintenance: 0 };
+        houses.forEach((h) => {
+          const s = h.status as HouseStatus;
+          if (s in houseCounts) (houseCounts as Record<string, number>)[s] = ((houseCounts as Record<string, number>)[s] || 0) + 1;
         });
 
-        return () => unsubscribe();
-    }, [isAdmin]);
+        const bookings = bookSnap.docs.map((d) => d.data() as { status?: string });
+        const bookCounts = {
+          total: bookings.length,
+          pending: bookings.filter((b) => b.status === "pending").length,
+          confirmed: bookings.filter((b) => b.status === "confirmed").length,
+        };
 
-    const handleStatusUpdate = async (houseId: string, newStatus: HouseStatus) => {
-        setUpdatingId(houseId);
-        try {
-            const updateData: any = { status: newStatus };
+        const orders = ordersSnap.docs.map((d) => d.data() as { status?: string });
+        const activeOrders = orders.filter((o) => o.status !== "delivered" && o.status !== "cancelled");
 
-            // If checking out (moving to dirty), clear the guest data
-            if (newStatus === 'dirty') {
-                updateData.currentGuest = null; // or deleteField()
-                // In a perfect world, we also call 'updateDoc' on the Booking to mark it as Checked Out,
-                // but for now we focus on the House visual state.
-            }
-
-            await updateDoc(doc(db, "accommodations", houseId), updateData);
-        } catch (error) {
-            console.error("Failed to update status", error);
-            alert("Төлөв өөрчилж чадсангүй");
-        } finally {
-            setUpdatingId(null);
-        }
+        setStats({
+          houses: houseCounts,
+          bookings: bookCounts,
+          orders: { total: orders.length, active: activeOrders.length },
+          menuItems: menuSnap.size,
+          users: usersSnap.size,
+        });
+      } catch (e) {
+        console.error("Dashboard fetch error:", e);
+      } finally {
+        setLoadingStats(false);
+      }
     };
 
-    // ... (rest of code)
+    fetch();
+  }, [isAdmin]);
 
-    const openBookingModal = (houseId: string) => {
-        setSelectedHouseId(houseId);
-        setIsBookingModalOpen(true);
-    };
-
-    const handleLogout = async () => {
-        await signOut(auth);
-        router.push("/login"); // or wherever
-    };
-
-    const filteredHouses = houses.filter(h => filterStatus === 'all' || h.status === filterStatus);
-
-    // Stats
-    const stats = {
-        total: houses.length,
-        occupied: houses.filter(h => h.status === 'occupied').length,
-        dirty: houses.filter(h => h.status === 'dirty').length,
-        clean: houses.filter(h => h.status === 'clean').length
-    };
-
-    if (loading || !isAdmin) return <div className="h-full flex items-center justify-center p-8">Loading...</div>;
-
+  if (loading || !isAdmin) {
     return (
-        <div className="flex flex-col h-[calc(100vh-64px)]">
-            {/* Sub-Header & Filters */}
-            <div className="bg-white border-b border-gray-200 py-4 shadow-sm z-30">
-                <div className="max-w-[1920px] mx-auto px-4 sm:px-6 lg:px-8 flex flex-col sm:flex-row justify-between items-center space-y-4 sm:space-y-0">
-                    <div className="flex space-x-2 overflow-x-auto pb-2 sm:pb-0 w-full sm:w-auto scrollbar-hide">
-                        <button
-                            onClick={() => setFilterStatus('all')}
-                            className={`px-4 py-2 rounded-full text-sm font-medium transition-colors whitespace-nowrap ${filterStatus === 'all' ? 'bg-gray-900 text-white' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'}`}
-                        >
-                            Бүгд ({stats.total})
-                        </button>
-                        <button
-                            onClick={() => setFilterStatus('occupied')}
-                            className={`px-4 py-2 rounded-full text-sm font-medium transition-colors whitespace-nowrap ${filterStatus === 'occupied' ? 'bg-indigo-600 text-white' : 'bg-indigo-50 text-indigo-700 hover:bg-indigo-100'}`}
-                        >
-                            Хүнтэй ({stats.occupied})
-                        </button>
-                        <button
-                            onClick={() => setFilterStatus('clean')}
-                            className={`px-4 py-2 rounded-full text-sm font-medium transition-colors whitespace-nowrap ${filterStatus === 'clean' ? 'bg-green-600 text-white' : 'bg-green-50 text-green-700 hover:bg-green-100'}`}
-                        >
-                            Бэлэн ({stats.clean})
-                        </button>
-                        <button
-                            onClick={() => setFilterStatus('dirty')}
-                            className={`px-4 py-2 rounded-full text-sm font-medium transition-colors whitespace-nowrap ${filterStatus === 'dirty' ? 'bg-red-600 text-white' : 'bg-red-50 text-red-700 hover:bg-red-100'}`}
-                        >
-                            Бохир ({stats.dirty})
-                        </button>
-                    </div>
-
-                    <div className="flex space-x-2 w-full sm:w-auto">
-                        <Link href="/admin/houses" className="flex-1 sm:flex-none px-4 py-2 bg-white border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 flex items-center justify-center text-sm font-medium">
-                            <Settings size={16} className="mr-2" />
-                            Байшин засах
-                        </Link>
-                        <button
-                            onClick={() => openBookingModal("")}
-                            className="flex-1 sm:flex-none px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 flex items-center justify-center text-sm font-medium shadow-sm transition-colors"
-                        >
-                            <PlusCircle size={16} className="mr-2" />
-                            Шинэ Захиалга
-                        </button>
-                    </div>
-                </div>
-            </div>
-
-            {/* Main Content - House Grid */}
-            <div className="flex-1 overflow-y-auto p-4 sm:p-6 lg:p-8 bg-gray-100">
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-6 max-w-[1920px] mx-auto">
-                    {filteredHouses.map((house) => (
-                        <div
-                            key={house.id}
-                            className={`bg-white rounded-xl shadow-sm border overflow-hidden hover:shadow-md transition-shadow flex flex-col ${STATUS_COLORS[house.status || 'clean'].split(' ')[0]}`}
-                        >
-                            <div className="relative h-48 sm:h-40 bg-gray-200">
-                                <img
-                                    src={(house.images && house.images.length > 0) ? house.images[0] : (house.imageUrl || "/placeholder-house.jpg")}
-                                    alt={house.name}
-                                    className="w-full h-full object-cover"
-                                    onError={(e) => {
-                                        (e.target as HTMLImageElement).src = 'https://placehold.co/600x400?text=No+Image';
-                                    }}
-                                />
-                                <div className="absolute top-2 right-2 bg-white/95 backdrop-blur-sm px-2 py-1 rounded text-xs font-bold shadow-sm text-gray-800">
-                                    {(house.price || 0).toLocaleString()}₮
-                                </div>
-                                <div className="absolute bottom-2 left-2 bg-black/60 text-white px-2 py-1 rounded text-sm font-bold backdrop-blur-sm">
-                                    #{house.houseNumber} {house.name}
-                                </div>
-                            </div>
-
-                            <div className={`p-4 flex-1 flex flex-col ${STATUS_COLORS[house.status || 'clean'].split(' ')[1]}`}>
-                                <div className="flex justify-between items-center mb-2">
-                                    <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium capitalize border bg-white/50 backdrop-blur-sm
-                                        ${house.status === 'clean' ? 'text-green-800 border-green-200' :
-                                            house.status === 'dirty' ? 'text-red-800 border-red-200' :
-                                                house.status === 'occupied' ? 'text-indigo-800 border-indigo-200' :
-                                                    'text-yellow-800 border-yellow-200'}`}>
-                                        {STATUS_LABELS[house.status || 'clean']}
-                                    </span>
-                                </div>
-
-                                {/* Guest Details for Occupied Houses - The "Real Data" Insight */}
-                                {house.status === 'occupied' && house.currentGuest && (
-                                    <div className="mb-4 bg-white/60 p-2 rounded border border-indigo-100 text-sm">
-                                        <div className="font-semibold text-indigo-900">{house.currentGuest.name}</div>
-                                        <div className="text-indigo-700 text-xs">{house.currentGuest.phone}</div>
-                                        {house.currentGuest.checkOutDate && (
-                                            <div className="text-gray-500 text-xs mt-1 border-t border-indigo-100 pt-1">
-                                                Гарах: {new Date(house.currentGuest.checkOutDate).toLocaleDateString()}
-                                            </div>
-                                        )}
-                                    </div>
-                                )}
-
-                                <div className="mt-auto grid grid-cols-2 gap-2">
-                                    {/* Primary Action Button */}
-                                    {house.status === 'clean' ? (
-                                        <button
-                                            onClick={() => openBookingModal(house.id)}
-                                            className="col-span-2 flex items-center justify-center w-full py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 text-sm font-medium transition-colors shadow-sm"
-                                        >
-                                            <Calendar size={16} className="mr-2" />
-                                            Захиалах
-                                        </button>
-                                    ) : house.status === 'occupied' ? (
-                                        <button
-                                            onClick={() => handleStatusUpdate(house.id, 'dirty')}
-                                            disabled={updatingId === house.id}
-                                            className="col-span-2 flex items-center justify-center w-full py-2 bg-white border border-red-300 text-red-700 rounded-lg hover:bg-red-50 text-sm font-medium transition-colors shadow-sm"
-                                        >
-                                            <LogOut size={16} className="mr-2" />
-                                            Check-out
-                                        </button>
-                                    ) : house.status === 'dirty' ? (
-                                        <button
-                                            onClick={() => handleStatusUpdate(house.id, 'cleaning')}
-                                            disabled={updatingId === house.id}
-                                            className="col-span-2 flex items-center justify-center w-full py-2 bg-white border border-yellow-300 text-yellow-700 rounded-lg hover:bg-yellow-50 text-sm font-medium transition-colors shadow-sm"
-                                        >
-                                            <RefreshCw size={16} className="mr-2" />
-                                            Цэвэрлэх
-                                        </button>
-                                    ) : house.status === 'cleaning' ? (
-                                        <button
-                                            onClick={() => handleStatusUpdate(house.id, 'clean')}
-                                            disabled={updatingId === house.id}
-                                            className="col-span-2 flex items-center justify-center w-full py-2 bg-white border border-green-300 text-green-700 rounded-lg hover:bg-green-50 text-sm font-medium transition-colors shadow-sm"
-                                        >
-                                            <CheckCircle size={16} className="mr-2" />
-                                            Бэлэн болгох
-                                        </button>
-                                    ) : (
-                                        <button
-                                            onClick={() => handleStatusUpdate(house.id, 'clean')}
-                                            className="col-span-2 flex items-center justify-center w-full py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700 text-sm font-medium shadow-sm"
-                                        >
-                                            Засвар дууссан
-                                        </button>
-                                    )}
-
-                                    {/* Secondary Utility Actions */}
-                                    <button
-                                        onClick={() => handleStatusUpdate(house.id, house.status === 'maintenance' ? 'clean' : 'maintenance')}
-                                        className="flex items-center justify-center py-2 bg-white border border-gray-200 text-gray-600 rounded-lg hover:bg-gray-50 text-xs font-medium shadow-sm transition-colors"
-                                        title={house.status === 'maintenance' ? 'Хэвийн болгох' : 'Засварт оруулах'}
-                                    >
-                                        <PenTool size={14} className="mr-1" />
-                                        {house.status === 'maintenance' ? 'Хэвийн' : 'Засвар'}
-                                    </button>
-
-                                    {house.status !== 'dirty' && house.status !== 'occupied' && (
-                                        <button
-                                            onClick={() => handleStatusUpdate(house.id, 'dirty')}
-                                            className="flex items-center justify-center py-2 bg-white border border-gray-200 text-gray-600 rounded-lg hover:bg-gray-50 text-xs font-medium shadow-sm transition-colors"
-                                            title="Бохирдуулах"
-                                        >
-                                            <XCircle size={14} className="mr-1" />
-                                            Бохир
-                                        </button>
-                                    )}
-                                </div>
-                            </div>
-                        </div>
-                    ))}
-                </div>
-            </div>
-
-            {/* Quick Booking Modal */}
-            <QuickBookingModal
-                isOpen={isBookingModalOpen}
-                onClose={() => setIsBookingModalOpen(false)}
-                houses={houses}
-                preSelectedHouseId={selectedHouseId}
-                onSuccess={() => {/* Maybe refresh or show toast */ }}
-            />
-        </div>
+      <div className="min-h-[50vh] flex items-center justify-center">
+        <div className="spinner" />
+      </div>
     );
+  }
+
+  return (
+    <div className="max-w-6xl mx-auto content-padding">
+      <h1 className="text-xl sm:text-2xl font-bold text-[var(--foreground)] mb-2">Хянах самбар</h1>
+      <p className="text-[var(--muted)] text-sm mb-6 sm:mb-8">Гол мэдээлэл, удирдлагын холбоос</p>
+
+      {loadingStats ? (
+        <div className="flex justify-center py-16">
+          <div className="spinner" />
+        </div>
+      ) : (
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-5">
+          {/* Байшин удирдлага */}
+          <Link href="/admin/houses" className="card p-5 hover:shadow-[var(--shadow-lg)] transition-shadow group block">
+            <div className="flex items-start justify-between gap-3">
+              <div className="flex items-center justify-center w-11 h-11 rounded-xl bg-indigo-100 text-indigo-600">
+                <Home size={22} />
+              </div>
+              <ChevronRight className="w-5 h-5 text-[var(--muted)] group-hover:text-[var(--primary)] flex-shrink-0" />
+            </div>
+            <h2 className="font-semibold text-[var(--foreground)] mt-3 mb-2">Байшин удирдлага</h2>
+            <div className="flex flex-wrap gap-x-4 gap-y-1 text-sm text-[var(--muted)]">
+              <span>Нийт: <strong className="text-[var(--foreground)]">{stats?.houses.total ?? 0}</strong></span>
+              <span>Хүнтэй: <strong className="text-indigo-600">{stats?.houses.occupied ?? 0}</strong></span>
+              <span>Бэлэн: <strong className="text-green-600">{stats?.houses.clean ?? 0}</strong></span>
+              <span>Бохир: <strong className="text-red-600">{stats?.houses.dirty ?? 0}</strong></span>
+            </div>
+            <p className="text-xs text-[var(--muted-foreground)] mt-3">Жороо засах, байшин нэмэх</p>
+          </Link>
+
+          {/* Захиалга удирдлага */}
+          <div className="card p-5 flex flex-col">
+            <div className="flex items-start justify-between gap-3">
+              <div className="flex items-center justify-center w-11 h-11 rounded-xl bg-amber-100 text-amber-600">
+                <Calendar size={22} />
+              </div>
+            </div>
+            <h2 className="font-semibold text-[var(--foreground)] mt-3 mb-2">Захиалга удирдлага</h2>
+            <div className="flex flex-wrap gap-x-4 gap-y-1 text-sm text-[var(--muted)]">
+              <span>Нийт: <strong className="text-[var(--foreground)]">{stats?.bookings.total ?? 0}</strong></span>
+              <span>Хүлээгдэж буй: <strong className="text-amber-600">{stats?.bookings.pending ?? 0}</strong></span>
+              <span>Баталгаажсан: <strong className="text-green-600">{stats?.bookings.confirmed ?? 0}</strong></span>
+            </div>
+            <div className="mt-4 flex flex-wrap gap-2">
+              <Link href="/admin/bookings" className="btn-primary text-sm py-2 px-4 inline-flex">
+                <ListOrdered size={16} className="mr-1.5" /> Захиалгууд
+              </Link>
+              <Link href="/admin/bookings/new" className="text-sm py-2 px-4 rounded-xl border border-[var(--border)] text-[var(--foreground)] hover:bg-[var(--background)] inline-flex">
+                Шинэ захиалга
+              </Link>
+            </div>
+          </div>
+
+          {/* Ресторан удирдлага */}
+          <div className="card p-5 flex flex-col">
+            <div className="flex items-start justify-between gap-3">
+              <div className="flex items-center justify-center w-11 h-11 rounded-xl bg-emerald-100 text-emerald-600">
+                <UtensilsCrossed size={22} />
+              </div>
+            </div>
+            <h2 className="font-semibold text-[var(--foreground)] mt-3 mb-2">Ресторан удирдлага</h2>
+            <div className="flex flex-wrap gap-x-4 gap-y-1 text-sm text-[var(--muted)]">
+              <span>Меню: <strong className="text-[var(--foreground)]">{stats?.menuItems ?? 0}</strong> ширхэг</span>
+              <span>Идэвхтэй захиалга: <strong className="text-amber-600">{stats?.orders.active ?? 0}</strong></span>
+            </div>
+            <div className="mt-4 flex flex-wrap gap-2">
+              <Link href="/admin/restaurant/menu" className="text-sm py-2 px-4 rounded-xl border border-[var(--border)] text-[var(--foreground)] hover:bg-[var(--background)] inline-flex">
+                <ChefHat size={16} className="mr-1.5" /> Меню
+              </Link>
+              <Link href="/admin/restaurant/orders" className="text-sm py-2 px-4 rounded-xl border border-[var(--border)] text-[var(--foreground)] hover:bg-[var(--background)] inline-flex">
+                <UtensilsCrossed size={16} className="mr-1.5" /> Захиалгууд (Kitchen)
+              </Link>
+            </div>
+          </div>
+
+          {/* Өдрийн үйл ажиллагаа / Housekeeping */}
+          <Link href="/admin/operations" className="card p-5 hover:shadow-[var(--shadow-lg)] transition-shadow group block">
+            <div className="flex items-start justify-between gap-3">
+              <div className="flex items-center justify-center w-11 h-11 rounded-xl bg-slate-100 text-slate-600">
+                <ClipboardList size={22} />
+              </div>
+              <ChevronRight className="w-5 h-5 text-[var(--muted)] group-hover:text-[var(--primary)] flex-shrink-0" />
+            </div>
+            <h2 className="font-semibold text-[var(--foreground)] mt-3 mb-2">Өдрийн үйл ажиллагаа</h2>
+            <div className="flex flex-wrap gap-x-4 gap-y-1 text-sm text-[var(--muted)]">
+              <span>Хүнтэй: <strong className="text-indigo-600">{stats?.houses.occupied ?? 0}</strong></span>
+              <span>Бохир: <strong className="text-red-600">{stats?.houses.dirty ?? 0}</strong></span>
+              <span>Цэвэрлэж байна: <strong className="text-amber-600">{stats?.houses.cleaning ?? 0}</strong></span>
+              <span>Бэлэн: <strong className="text-green-600">{stats?.houses.clean ?? 0}</strong></span>
+            </div>
+            <p className="text-xs text-[var(--muted-foreground)] mt-3">Ирэх/гэх, байшны төлөв, өдрийн тайлан</p>
+          </Link>
+
+          {/* Channel Manager */}
+          <Link href="/admin/channel-manager" className="card p-5 hover:shadow-[var(--shadow-lg)] transition-shadow group block">
+            <div className="flex items-start justify-between gap-3">
+              <div className="flex items-center justify-center w-11 h-11 rounded-xl bg-violet-100 text-violet-600">
+                <Link2 size={22} />
+              </div>
+              <ChevronRight className="w-5 h-5 text-[var(--muted)] group-hover:text-[var(--primary)] flex-shrink-0" />
+            </div>
+            <h2 className="font-semibold text-[var(--foreground)] mt-3 mb-2">Channel Manager</h2>
+            <p className="text-sm text-[var(--muted)]">Буудлын цахим суваг, синк тохиргоо</p>
+          </Link>
+
+          {/* Хэрэглэгчид */}
+          <Link href="/admin/users" className="card p-5 hover:shadow-[var(--shadow-lg)] transition-shadow group block">
+            <div className="flex items-start justify-between gap-3">
+              <div className="flex items-center justify-center w-11 h-11 rounded-xl bg-cyan-100 text-cyan-600">
+                <Users size={22} />
+              </div>
+              <ChevronRight className="w-5 h-5 text-[var(--muted)] group-hover:text-[var(--primary)] flex-shrink-0" />
+            </div>
+            <h2 className="font-semibold text-[var(--foreground)] mt-3 mb-2">Хэрэглэгчид</h2>
+            <p className="text-sm text-[var(--muted)]">Нийт: <strong className="text-[var(--foreground)]">{stats?.users ?? 0}</strong></p>
+          </Link>
+
+          {/* Тохиргоо */}
+          <Link href="/admin/settings" className="card p-5 hover:shadow-[var(--shadow-lg)] transition-shadow group block">
+            <div className="flex items-start justify-between gap-3">
+              <div className="flex items-center justify-center w-11 h-11 rounded-xl bg-[var(--border)] text-[var(--muted)]">
+                <Settings size={22} />
+              </div>
+              <ChevronRight className="w-5 h-5 text-[var(--muted)] group-hover:text-[var(--primary)] flex-shrink-0" />
+            </div>
+            <h2 className="font-semibold text-[var(--foreground)] mt-3 mb-2">Тохиргоо</h2>
+            <p className="text-sm text-[var(--muted)]">Сайт, холбоо барих, ресторан, захиалга</p>
+          </Link>
+        </div>
+      )}
+    </div>
+  );
 }

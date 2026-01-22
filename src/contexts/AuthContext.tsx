@@ -11,6 +11,7 @@ interface AuthContextType {
   userProfile: UserProfile | null;
   loading: boolean;
   isAdmin: boolean;
+  refreshUserProfile: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType>({
@@ -18,6 +19,7 @@ const AuthContext = createContext<AuthContextType>({
   userProfile: null,
   loading: true,
   isAdmin: false,
+  refreshUserProfile: async () => {},
 });
 
 export const useAuth = () => useContext(AuthContext);
@@ -60,8 +62,21 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
 
   const isAdmin = userProfile?.role === "admin";
 
+  const refreshUserProfile = async () => {
+    if (!user) return;
+    try {
+      const userDocRef = doc(db, "users", user.uid);
+      const userDoc = await getDoc(userDocRef);
+      if (userDoc.exists()) {
+        setUserProfile(userDoc.data() as UserProfile);
+      }
+    } catch (e) {
+      console.error("Error refreshing user profile:", e);
+    }
+  };
+
   return (
-    <AuthContext.Provider value={{ user, userProfile, loading, isAdmin }}>
+    <AuthContext.Provider value={{ user, userProfile, loading, isAdmin, refreshUserProfile }}>
       {children}
     </AuthContext.Provider>
   );

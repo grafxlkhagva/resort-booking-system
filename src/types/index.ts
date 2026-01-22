@@ -54,6 +54,13 @@ export interface House {
         label?: string;
         isActive?: boolean;
     };
+    channelMappings?: {
+        [key: string]: {
+            roomId: string;
+            rateId?: string;
+            isSyncing: boolean;
+        };
+    };
 }
 
 export type BookingStatus = 'pending' | 'confirmed' | 'cancelled';
@@ -127,19 +134,58 @@ export interface ResortSettings {
         username: string;
         password?: string; // stored securely or just for API mocking
     };
+    restaurant?: {
+        isActive: boolean;
+        openTime: string; // "09:00"
+        closeTime: string; // "22:00"
+        deliveryEnabled: boolean;
+        minOrderAmount?: number;
+    };
 }
 
-// ... existing types ...
+export interface MenuCategory {
+    id: string;
+    name: string;
+    order: number;
+    isActive: boolean;
+}
 
-export interface House {
-    // ... existing fields ...
-    channelMappings?: {
-        [key: string]: { // e.g., 'bookingDotCom'
-            roomId: string;
-            rateId?: string;
-            isSyncing: boolean;
-        }
-    };
+export interface MenuItem {
+    id: string;
+    categoryId: string;
+    name: string;
+    description: string;
+    price: number;
+    imageUrl?: string;
+    isAvailable: boolean;
+    tags?: string[]; // 'spicy', 'vegetarian', etc.
+    createdAt: number;
+}
+
+export type OrderStatus = 'pending' | 'confirmed' | 'preparing' | 'ready' | 'delivered' | 'cancelled';
+
+export interface OrderItem {
+    menuItemId: string;
+    name: string; // Snapshot of name at time of order
+    price: number; // Snapshot of price
+    quantity: number;
+    notes?: string;
+}
+
+export interface Order {
+    id: string;
+    userId: string;
+    userPhone?: string; // Contact for the order
+    guestName?: string;
+    items: OrderItem[];
+    totalAmount: number;
+    status: OrderStatus;
+    deliveryType: 'house' | 'pickup';
+    houseId?: string; // If deliveryType is house
+    houseName?: string; // For easy display
+    createdAt: number;
+    updatedAt: number;
+    note?: string; // General order note
 }
 
 export interface Review {

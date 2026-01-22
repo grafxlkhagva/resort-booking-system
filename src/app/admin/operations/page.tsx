@@ -45,7 +45,7 @@ export default function HouseOperationsPage() {
 
         try {
             const bookingsRef = collection(db, "bookings");
-            const q = query(bookingsRef, orderBy("checkInDate", "asc"));
+            const q = query(bookingsRef, orderBy("startDate", "asc"));
             const querySnapshot = await getDocs(q);
             const bookingsData = querySnapshot.docs.map(doc => {
                 const data = doc.data();
@@ -77,12 +77,17 @@ export default function HouseOperationsPage() {
     useEffect(() => {
         if (!isAdmin) return;
 
-        const unsubscribe = onSnapshot(collection(db, "houses"), (snapshot) => {
-            const housesData = snapshot.docs.map(doc => ({
-                id: doc.id,
-                ...doc.data(),
-                status: doc.data().status || 'clean' // Default to clean if undefined
-            })) as House[];
+        const unsubscribe = onSnapshot(collection(db, "accommodations"), (snapshot) => {
+            const housesData = snapshot.docs.map((d) => {
+                const data = d.data();
+                return {
+                    id: d.id,
+                    ...data,
+                    status: data.status || 'clean',
+                    price: data.pricePerNight ?? data.price ?? 0,
+                    imageUrl: data.featuredImage ?? data.imageUrl,
+                } as House;
+            });
             // Sort by house number
             setHouses(housesData.sort((a, b) => a.houseNumber - b.houseNumber));
         });
@@ -159,9 +164,11 @@ export default function HouseOperationsPage() {
     const updateStatus = async (houseId: string, newStatus: HouseStatus) => {
         setUpdatingId(houseId);
         try {
-            await updateDoc(doc(db, "houses", houseId), {
-                status: newStatus
-            });
+            const updateData: { status: HouseStatus; currentGuest?: null } = { status: newStatus };
+            if (newStatus === 'dirty') {
+                updateData.currentGuest = null;
+            }
+            await updateDoc(doc(db, "accommodations", houseId), updateData);
         } catch (err) {
             console.error("Failed to update status", err);
             alert("Failed to update status");

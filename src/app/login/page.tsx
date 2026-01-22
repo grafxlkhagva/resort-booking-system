@@ -168,97 +168,66 @@ export default function LoginPage() {
     };
 
     return (
-        <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-indigo-50 via-white to-purple-50">
-            <div className="max-w-md w-full space-y-8 p-8 bg-white rounded-2xl shadow-xl border border-gray-100">
+        <div className="min-h-screen flex items-center justify-center p-4 bg-[var(--background)]">
+            <div className="card w-full max-w-md p-6 sm:p-8 space-y-6">
                 <div className="text-center">
-                    <div className="mx-auto flex items-center justify-center h-16 w-16 rounded-full bg-indigo-100 mb-4">
-                        <Phone className="h-8 w-8 text-indigo-600" />
+                    <div className="mx-auto flex items-center justify-center h-14 w-14 rounded-full bg-[var(--primary)]/10 text-[var(--primary)] mb-4">
+                        <Phone className="h-7 w-7" />
                     </div>
-                    <h2 className="text-3xl font-bold text-gray-900">
+                    <h2 className="text-xl sm:text-2xl font-bold text-[var(--foreground)]">
                         {step === "phone" ? "Нэвтрэх" : "Баталгаажуулах"}
                     </h2>
-                    <p className="mt-2 text-sm text-gray-600">
-                        {step === "phone"
-                            ? "Утасны дугаараа оруулж нэвтрэнэ үү"
-                            : `${phoneNumber} дугаар руу илгээсэн 6 оронтой кодыг оруулна уу`}
+                    <p className="mt-2 text-sm text-[var(--muted)]">
+                        {step === "phone" ? "Утасны дугаараа оруулж нэвтрэнэ үү" : `${phoneNumber} руу илгээсэн 6 оронтой кодыг оруулна уу`}
                     </p>
                 </div>
 
-                {error && (
-                    <div className="p-3 bg-red-50 text-red-700 rounded-md text-sm">
-                        {error}
-                    </div>
-                )}
+                {error && <div className="p-3 rounded-xl bg-red-50 text-red-700 text-sm border border-red-100">{error}</div>}
 
                 {step === "phone" ? (
                     <div className="space-y-4">
                         <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-2">
-                                Утасны дугаар
-                            </label>
+                            <label className="block text-sm font-medium text-[var(--foreground)] mb-2">Утасны дугаар</label>
                             <input
                                 type="tel"
                                 placeholder="+97699123456"
-                                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent text-lg"
+                                className="w-full px-4 py-3 rounded-xl border border-[var(--border)] bg-[var(--card)] focus:outline-none focus:ring-2 focus:ring-[var(--primary)]"
                                 value={phoneNumber}
                                 onChange={(e) => setPhoneNumber(e.target.value)}
                                 disabled={loading}
                             />
-                            <p className="text-xs text-gray-500 mt-2">
-                                Монголын дугаар: +976 99123456
-                            </p>
+                            <p className="text-xs text-[var(--muted)] mt-2">Монгол: +976 99123456</p>
                         </div>
-
-                        <button
-                            onClick={sendOTP}
-                            disabled={loading}
-                            className="w-full bg-indigo-600 text-white py-3 px-4 rounded-lg hover:bg-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors font-medium"
-                        >
-                            {loading ? "Илгээж байна..." : "Код авах"}
+                        <button onClick={sendOTP} disabled={loading} className="btn-primary w-full">
+                            {loading ? "Илгээж байна…" : "Код авах"}
                         </button>
-
-                        <p className="text-center text-sm text-gray-500 mt-4">
-                            Анх удаа бол автоматаар бүртгэл үүснэ
-                        </p>
+                        <p className="text-center text-sm text-[var(--muted)]">Анх удаа бол автоматаар бүртгэл үүснэ</p>
                     </div>
                 ) : (
                     <div className="space-y-4">
                         <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-2">
-                                Баталгаажуулах код
-                            </label>
+                            <label className="block text-sm font-medium text-[var(--foreground)] mb-2">Баталгаажуулах код</label>
                             <input
                                 type="text"
                                 placeholder="123456"
                                 maxLength={6}
-                                className="w-full px-4 py-3 border border-gray-300 rounded-lg text-center text-2xl tracking-widest focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+                                className="w-full px-4 py-3 rounded-xl border border-[var(--border)] bg-[var(--card)] text-center text-xl tracking-[0.3em] focus:outline-none focus:ring-2 focus:ring-[var(--primary)]"
                                 value={otp}
-                                onChange={(e) => setOtp(e.target.value.replace(/\D/g, ''))}
+                                onChange={(e) => setOtp(e.target.value.replace(/\D/g, ""))}
                                 disabled={loading}
                                 autoFocus
                             />
                         </div>
-
-                        <button
-                            onClick={verifyOTP}
-                            disabled={loading || otp.length !== 6}
-                            className="w-full bg-indigo-600 text-white py-3 px-4 rounded-lg hover:bg-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors font-medium"
-                        >
-                            {loading ? "Баталгаажуулж байна..." : "Нэвтрэх"}
+                        <button onClick={verifyOTP} disabled={loading || otp.length !== 6} className="btn-primary w-full">
+                            {loading ? "Баталгаажуулж байна…" : "Нэвтрэх"}
                         </button>
-
-                        <button
-                            onClick={resendOTP}
-                            disabled={loading}
-                            className="w-full text-indigo-600 py-2 px-4 rounded-lg hover:bg-indigo-50 disabled:opacity-50 transition-colors text-sm font-medium"
-                        >
+                        <button onClick={resendOTP} disabled={loading} className="w-full py-2.5 text-[var(--primary)] hover:bg-[var(--primary)]/10 rounded-xl text-sm font-medium transition-colors">
                             Код дахин авах
                         </button>
                     </div>
                 )}
 
-                {/* reCAPTCHA container */}
-                <div id="recaptcha-container"></div>
+                <div id="recaptcha-container" />
             </div>
         </div>
     );

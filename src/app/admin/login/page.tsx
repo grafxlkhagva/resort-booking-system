@@ -59,81 +59,60 @@ export default function AdminLoginPage() {
     };
 
     return (
-        <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900">
-            <div className="max-w-md w-full space-y-8 p-8 bg-white rounded-2xl shadow-2xl border border-gray-200">
+        <div className="min-h-screen flex items-center justify-center p-4 bg-slate-900">
+            <div className="card w-full max-w-md p-6 sm:p-8 space-y-6">
                 <div className="text-center">
-                    <div className="mx-auto flex items-center justify-center h-16 w-16 rounded-full bg-gray-900 mb-4">
-                        <Shield className="h-8 w-8 text-white" />
+                    <div className="mx-auto flex items-center justify-center h-14 w-14 rounded-full bg-slate-900 text-white mb-4">
+                        <Shield className="h-7 w-7" />
                     </div>
-                    <h2 className="text-3xl font-bold text-gray-900">
-                        Админ нэвтрэх
-                    </h2>
-                    <p className="mt-2 text-sm text-gray-600">
-                        Зөвхөн админ эрхтэй хэрэглэгчид нэвтрэх боломжтой
-                    </p>
+                    <h2 className="text-xl sm:text-2xl font-bold text-[var(--foreground)]">Админ нэвтрэх</h2>
+                    <p className="mt-2 text-sm text-[var(--muted)]">Зөвхөн админ эрхтэй хэрэглэгчид</p>
                 </div>
 
-                {error && (
-                    <div className="p-3 bg-red-50 text-red-700 rounded-md text-sm border border-red-200">
-                        {error}
-                    </div>
-                )}
+                {error && <div className="p-3 rounded-xl bg-red-50 text-red-700 text-sm border border-red-100">{error}</div>}
 
-                <form className="mt-8 space-y-6" onSubmit={handleSubmit}>
-                    <div className="space-y-4">
-                        <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-2">
-                                Имэйл хаяг
-                            </label>
-                            <input
-                                type="email"
-                                required
-                                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-900 focus:border-transparent"
-                                placeholder="admin@example.com"
-                                value={email}
-                                onChange={(e) => setEmail(e.target.value)}
-                                disabled={loading}
-                            />
-                        </div>
-                        <div className="relative">
-                            <label className="block text-sm font-medium text-gray-700 mb-2">
-                                Нууц үг
-                            </label>
-                            <input
-                                type={showPassword ? "text" : "password"}
-                                required
-                                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-900 focus:border-transparent pr-12"
-                                placeholder="••••••••"
-                                value={password}
-                                onChange={(e) => setPassword(e.target.value)}
-                                disabled={loading}
-                            />
-                            <button
-                                type="button"
-                                className="absolute right-3 top-11 text-gray-400 hover:text-gray-600"
-                                onClick={() => setShowPassword(!showPassword)}
-                            >
-                                {showPassword ? (
-                                    <EyeOff className="h-5 w-5" />
-                                ) : (
-                                    <Eye className="h-5 w-5" />
-                                )}
-                            </button>
-                        </div>
+                <form className="space-y-5" onSubmit={handleSubmit}>
+                    <div>
+                        <label className="block text-sm font-medium text-[var(--foreground)] mb-2">Имэйл</label>
+                        <input
+                            type="email"
+                            required
+                            className="w-full px-4 py-3 rounded-xl border border-[var(--border)] bg-[var(--card)] focus:outline-none focus:ring-2 focus:ring-slate-900"
+                            placeholder="admin@example.com"
+                            value={email}
+                            onChange={(e) => setEmail(e.target.value)}
+                            disabled={loading}
+                        />
+                    </div>
+                    <div className="relative">
+                        <label className="block text-sm font-medium text-[var(--foreground)] mb-2">Нууц үг</label>
+                        <input
+                            type={showPassword ? "text" : "password"}
+                            required
+                            className="w-full px-4 py-3 pr-12 rounded-xl border border-[var(--border)] bg-[var(--card)] focus:outline-none focus:ring-2 focus:ring-slate-900"
+                            placeholder="••••••••"
+                            value={password}
+                            onChange={(e) => setPassword(e.target.value)}
+                            disabled={loading}
+                        />
+                        <button
+                            type="button"
+                            className="absolute right-3 top-10 text-[var(--muted)] hover:text-[var(--foreground)] touch-target flex items-center justify-center"
+                            onClick={() => setShowPassword(!showPassword)}
+                            aria-label={showPassword ? "Нууц үг нуух" : "Нууц үг харуулах"}
+                        >
+                            {showPassword ? <EyeOff size={20} /> : <Eye size={20} />}
+                        </button>
                     </div>
 
-                    <button
-                        type="submit"
-                        disabled={loading}
-                        className="w-full bg-gray-900 text-white py-3 px-4 rounded-lg hover:bg-gray-800 disabled:opacity-50 disabled:cursor-not-allowed transition-colors font-medium"
-                    >
-                        {loading ? "Нэвтэрч байна..." : "Нэвтрэх"}
+                    <button type="submit" disabled={loading} className="btn-primary w-full bg-slate-900 hover:bg-slate-800">
+                        {loading ? "Нэвтэрч байна…" : "Нэвтрэх"}
                     </button>
 
-                    <p className="text-center text-xs text-gray-500 mt-4">
-                        Энгийн хэрэглэгч бол{" "}
-                        <a href="/login" className="text-indigo-600 hover:text-indigo-500 font-medium">
-                            энд дарж нэвтрэнэ үү
+                    <p className="text-center text-sm text-[var(--muted)]">
+                        Энгийн хэрэглэгч{" "}
+                        <a href="/login" className="text-[var(--primary)] font-medium hover:underline">
+                            энд дарна уу
                         </a>
                     </p>
                 </form>

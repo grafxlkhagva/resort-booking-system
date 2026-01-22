@@ -126,12 +126,17 @@ export default function HouseDetail() {
     }, [id, refreshReviews]);
 
     if (loading) return (
-        <div className="min-h-screen flex items-center justify-center">
-            <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-indigo-600"></div>
+        <div className="min-h-[50vh] flex items-center justify-center">
+            <div className="spinner" />
         </div>
     );
 
-    if (!house) return <div className="min-h-screen flex items-center justify-center">House not found</div>;
+    if (!house) return (
+        <div className="content-padding text-center py-16">
+            <p className="text-[var(--muted)]">Байшин олдсонгүй.</p>
+            <a href="/" className="mt-4 inline-block text-[var(--primary)] font-medium hover:underline">Нүүр рүү буцах</a>
+        </div>
+    );
 
     // Prepare images for grid (Featured + Gallery)
     const allImages = [house.imageUrl, ...(house.images || [])].filter(Boolean);
@@ -141,45 +146,36 @@ export default function HouseDetail() {
     const discountStatus = getDiscountStatus(house.discount);
 
     return (
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-            {/* Header Section */}
-            <div className="mb-6">
-                <h1 className="text-3xl font-bold text-gray-900 mb-2">
-                    <span className="mr-3 text-indigo-600">#{house.houseNumber}</span>
-                    {house.name}
+        <div className="max-w-7xl mx-auto content-padding pb-8">
+            {/* Header */}
+            <div className="mb-4 sm:mb-6">
+                <h1 className="text-xl sm:text-2xl lg:text-3xl font-bold text-[var(--foreground)] mb-2">
+                    <span className="text-[var(--primary)]">#{house.houseNumber}</span> {house.name}
                 </h1>
-                <div className="flex items-center justify-between text-sm text-gray-500">
-                    <div className="flex items-center space-x-4">
-                        <span className="flex items-center">
-                            <Star className="w-4 h-4 text-yellow-400 mr-1" fill="currentColor" />
-                            <span className="font-medium text-gray-900">
-                                {averageRating > 0 ? averageRating.toFixed(1) : "Шинэ"}
-                            </span>
-                            <span className="mx-1">·</span>
-                            <span className="underline">
-                                {reviews.length > 0 ? `${reviews.length} сэтгэгдэл` : "Сэтгэгдэлгүй"}
-                            </span>
-                        </span>
-                        <span className="flex items-center">
-                            <MapPin className="w-4 h-4 mr-1" />
-                            Тэрэлж, Улаанбаатар
-                        </span>
-                    </div>
-                    <div className="flex items-center space-x-4">
-                        <button className="flex items-center hover:underline">
-                            <Share2 className="w-4 h-4 mr-2" />
-                            Хуваалцах
+                <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-sm text-[var(--muted)]">
+                    <span className="flex items-center">
+                        <Star className="w-4 h-4 text-amber-400 mr-1" fill="currentColor" />
+                        <span className="font-medium text-[var(--foreground)]">{averageRating > 0 ? averageRating.toFixed(1) : "Шинэ"}</span>
+                        <span className="mx-1">·</span>
+                        <span>{reviews.length > 0 ? `${reviews.length} сэтгэгдэл` : "Сэтгэгдэлгүй"}</span>
+                    </span>
+                    <span className="flex items-center">
+                        <MapPin className="w-4 h-4 mr-1" />
+                        Тэрэлж, Улаанбаатар
+                    </span>
+                    <span className="flex items-center gap-2 sm:ml-auto">
+                        <button className="flex items-center hover:text-[var(--primary)] transition-colors touch-target">
+                            <Share2 className="w-4 h-4 mr-1" /> Хуваалцах
                         </button>
-                        <button className="flex items-center hover:underline">
-                            <Heart className="w-4 h-4 mr-2" />
-                            Хадгалах
+                        <button className="flex items-center hover:text-[var(--primary)] transition-colors touch-target">
+                            <Heart className="w-4 h-4 mr-1" /> Хадгалах
                         </button>
-                    </div>
+                    </span>
                 </div>
             </div>
 
             {/* Image Grid */}
-            <div className="grid grid-cols-1 md:grid-cols-4 gap-2 h-[400px] md:h-[500px] rounded-2xl overflow-hidden mb-10">
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-2 h-[260px] sm:h-[340px] md:h-[420px] rounded-2xl overflow-hidden mb-8 sm:mb-10">
                 <div className="md:col-span-2 h-full">
                     <img
                         src={displayImages[0]}
@@ -190,113 +186,93 @@ export default function HouseDetail() {
                 <div className="hidden md:grid md:col-span-2 grid-cols-2 gap-2 h-full">
                     {displayImages.slice(1).map((img, idx) => (
                         <div key={idx} className="relative h-full">
-                            <img
-                                src={img}
-                                alt={`${house.name} ${idx + 2}`}
-                                className="w-full h-full object-cover hover:opacity-95 transition-opacity cursor-pointer"
-                            />
+                            <img src={img} alt={`${house.name} ${idx + 2}`} className="w-full h-full object-cover" />
                         </div>
                     ))}
-                    {/* Fallback if not enough images */}
                     {displayImages.length < 5 && Array.from({ length: 5 - displayImages.length }).map((_, idx) => (
-                        <div key={`placeholder-${idx}`} className="bg-gray-100 flex items-center justify-center text-gray-400">
-                            <span className="text-xs">Зураг оруулаагүй</span>
+                        <div key={`pl-${idx}`} className="bg-[var(--background)] flex items-center justify-center text-[var(--muted-foreground)] text-xs">
+                            Зураг оруулаагүй
                         </div>
                     ))}
                 </div>
             </div>
 
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-12">
-                {/* Left Column: Details */}
-                <div className="lg:col-span-2 space-y-10">
-                    {/* Host Info & Capacity */}
-                    <div className="flex items-center justify-between border-b border-gray-200 pb-6">
-                        <div>
-                            <h2 className="text-xl font-semibold text-gray-900 mb-1">
-                                Зохион байгуулагч: Resort Team
-                            </h2>
-                            <p className="text-gray-500">
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 lg:gap-12">
+                {/* Left: Details */}
+                <div className="lg:col-span-2 space-y-8">
+                    {/* Host & Capacity */}
+                    <div className="flex items-center justify-between gap-4 border-b border-[var(--border)] pb-6">
+                        <div className="min-w-0">
+                            <h2 className="font-semibold text-[var(--foreground)] mb-0.5">Зохион байгуулагч: Resort Team</h2>
+                            <p className="text-sm text-[var(--muted)]">
                                 {house.capacity} зочин · {house.capacity > 4 ? "2 унтлагын өрөө" : "1 унтлагын өрөө"} · 1 ариун цэврийн өрөө
                             </p>
                         </div>
-                        <div className="h-12 w-12 bg-indigo-100 rounded-full flex items-center justify-center text-indigo-600">
-                            <User size={24} />
+                        <div className="h-11 w-11 rounded-full bg-[var(--primary)]/10 flex items-center justify-center text-[var(--primary)] flex-shrink-0">
+                            <User size={22} />
                         </div>
                     </div>
 
                     {/* Description */}
                     <div>
-                        <h3 className="text-lg font-semibold text-gray-900 mb-4">Байшингийн тухай</h3>
-                        <div className="prose prose-indigo text-gray-600">
-                            <p>{house.longDescription || house.description}</p>
-                        </div>
+                        <h3 className="font-semibold text-[var(--foreground)] mb-3">Байшингийн тухай</h3>
+                        <p className="text-[var(--muted)] leading-relaxed">{house.longDescription || house.description}</p>
                     </div>
 
                     {/* Amenities */}
-                    <div className="border-t border-gray-200 pt-8">
-                        <h3 className="text-lg font-semibold text-gray-900 mb-6">Тав тух, нэмэлтүүд</h3>
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="border-t border-[var(--border)] pt-6">
+                        <h3 className="font-semibold text-[var(--foreground)] mb-4">Тав тух, нэмэлтүүд</h3>
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                             {house.amenities.map((item: any) => {
                                 const amenityId = typeof item === 'string' ? item : item.amenityId;
                                 const quantity = typeof item === 'string' ? 1 : item.quantity;
                                 const amenity = amenities.find(a => a.id === amenityId);
-
-                                // Skip if amenity not found (likely deleted or invalid ID)
                                 if (!amenity && !amenitiesLoading) return null;
-
                                 return (
-                                    <div key={amenityId} className="flex items-center text-gray-600">
-                                        {amenity && amenity.imageUrl ? (
-                                            <img src={amenity.imageUrl} alt={amenity.name} className="w-6 h-6 mr-3 object-contain opacity-70" />
+                                    <div key={amenityId} className="flex items-center gap-3 text-[var(--muted)] text-sm">
+                                        {amenity?.imageUrl ? (
+                                            <img src={amenity.imageUrl} alt="" className="w-5 h-5 object-contain opacity-80" />
                                         ) : (
-                                            <Check className="w-5 h-5 mr-3 text-gray-400" />
+                                            <Check className="w-5 h-5 text-[var(--muted-foreground)]" />
                                         )}
-                                        <span className="text-base">
-                                            {amenity ? amenity.name : "..."}
-                                            {quantity > 1 && <span className="ml-1 text-gray-400">({quantity}x)</span>}
-                                        </span>
+                                        <span>{amenity ? amenity.name : "..."}{quantity > 1 && ` (${quantity}×)`}</span>
                                     </div>
                                 );
                             })}
-                            <div className="flex items-center text-gray-600">
-                                <Users className="w-5 h-5 mr-3 text-gray-400" />
-                                <span className="text-base">{house.capacity} хүн хүртэл</span>
+                            <div className="flex items-center gap-3 text-[var(--muted)] text-sm">
+                                <Users className="w-5 h-5 text-[var(--muted-foreground)]" />
+                                <span>{house.capacity} хүн хүртэл</span>
                             </div>
                         </div>
                     </div>
 
-                    {/* Reviews Section */}
-                    <div className="border-t border-gray-200 pt-8">
-                        <h3 className="text-lg font-semibold text-gray-900 mb-6">Сэтгэгдэл</h3>
+                    {/* Reviews */}
+                    <div className="border-t border-[var(--border)] pt-6">
+                        <h3 className="font-semibold text-[var(--foreground)] mb-4">Сэтгэгдэл</h3>
                         <ReviewList houseId={house.id} refreshTrigger={refreshReviews} />
-
-                        <div className="mt-8">
+                        <div className="mt-6">
                             <ReviewForm houseId={house.id} onReviewSubmitted={() => setRefreshReviews(prev => prev + 1)} />
                         </div>
                     </div>
                 </div>
 
-                {/* Right Column: Sticky Booking Card */}
+                {/* Right: Booking Card */}
                 <div className="lg:col-span-1">
-                    <div className="sticky top-24 bg-white rounded-xl shadow-xl border border-gray-200 p-6">
-                        <div className="mb-6">
+                    <div className="card-elevated sticky top-20 lg:top-24 p-4 sm:p-6">
+                        <div className="mb-5">
                             {discountActive ? (
-                                <div className="flex flex-col">
-                                    <div className="flex items-baseline space-x-2">
-                                        <span className="text-2xl font-bold text-red-600">
-                                            ${house.discount!.price}
-                                        </span>
-                                        <span className="text-lg text-gray-500 line-through">
-                                            ${house.price}
-                                        </span>
-                                        <span className="text-gray-500">/хоног</span>
+                                <div>
+                                    <div className="flex items-baseline gap-2 flex-wrap">
+                                        <span className="text-2xl font-bold text-red-600">${house.discount!.price}</span>
+                                        <span className="text-[var(--muted)] line-through">${house.price}</span>
+                                        <span className="text-[var(--muted)] text-sm">/хоног</span>
                                     </div>
-                                    <div className="mt-2 flex flex-wrap gap-2">
-                                        <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800">
+                                    <div className="mt-2 flex flex-wrap gap-1.5">
+                                        <span className="px-2.5 py-0.5 rounded-lg text-xs font-medium bg-red-100 text-red-800">
                                             {house.discount?.label || "ХЯМДРАЛ"}
                                         </span>
                                         {house.discount?.validDays && house.discount.validDays.length > 0 && (
-                                            <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-800">
+                                            <span className="px-2.5 py-0.5 rounded-lg text-xs font-medium bg-[var(--background)] text-[var(--muted)]">
                                                 {formatValidDays(house.discount.validDays)}
                                             </span>
                                         )}
@@ -304,69 +280,48 @@ export default function HouseDetail() {
                                 </div>
                             ) : (
                                 <div className="flex items-baseline">
-                                    <span className="text-2xl font-bold text-gray-900">${house.price}</span>
-                                    <span className="text-gray-500 ml-1">/хоног</span>
+                                    <span className="text-2xl font-bold text-[var(--foreground)]">${house.price}</span>
+                                    <span className="text-[var(--muted)] ml-1 text-sm">/хоног</span>
                                 </div>
                             )}
                         </div>
 
-                        <div className="border border-gray-300 rounded-lg mb-4 overflow-hidden">
-                            <div className="flex border-b border-gray-300">
-                                <div className="w-1/2 p-3 border-r border-gray-300">
-                                    <label className="block text-xs font-bold text-gray-700 uppercase">Ирэх</label>
-                                    <div className="text-sm text-gray-500 mt-1">Огноо сонгох</div>
+                        <div className="border border-[var(--border)] rounded-xl overflow-hidden mb-4">
+                            <div className="flex border-b border-[var(--border)]">
+                                <div className="w-1/2 p-3 border-r border-[var(--border)]">
+                                    <span className="text-xs font-medium text-[var(--muted)] uppercase">Ирэх</span>
+                                    <p className="text-sm text-[var(--muted-foreground)] mt-0.5">Огноо сонгох</p>
                                 </div>
                                 <div className="w-1/2 p-3">
-                                    <label className="block text-xs font-bold text-gray-700 uppercase">Буцах</label>
-                                    <div className="text-sm text-gray-500 mt-1">Огноо сонгох</div>
+                                    <span className="text-xs font-medium text-[var(--muted)] uppercase">Буцах</span>
+                                    <p className="text-sm text-[var(--muted-foreground)] mt-0.5">Огноо сонгох</p>
                                 </div>
                             </div>
                             <div className="p-3">
-                                <label className="block text-xs font-bold text-gray-700 uppercase">Зочид</label>
-                                <div className="text-sm text-gray-900 mt-1">{house.capacity} зочин</div>
+                                <span className="text-xs font-medium text-[var(--muted)] uppercase">Зочид</span>
+                                <p className="text-sm font-medium text-[var(--foreground)] mt-0.5">{house.capacity} зочин</p>
                             </div>
                         </div>
 
                         {bookingBlocked ? (
-                            <div className="bg-red-50 border border-red-200 rounded-lg p-4 text-center">
-                                <p className="text-red-800 font-medium mb-1">Захиалга Түр Хаагдсан</p>
-                                <p className="text-sm text-red-600">
-                                    {blockMessage || "Одоогоор захиалга авах боломжгүй байна."}
-                                </p>
-                                <button
-                                    disabled
-                                    className="w-full mt-3 bg-gray-300 border border-transparent rounded-lg py-3 px-4 flex items-center justify-center text-lg font-semibold text-gray-500 cursor-not-allowed"
-                                >
-                                    Захиалах Боломжгүй
+                            <div className="bg-red-50 dark:bg-red-950/30 border border-red-200 dark:border-red-800 rounded-xl p-4 text-center">
+                                <p className="font-medium text-red-800 dark:text-red-200 mb-1">Захиалга түр хаагдсан</p>
+                                <p className="text-sm text-red-600 dark:text-red-300">{blockMessage || "Одоогоор захиалга авах боломжгүй."}</p>
+                                <button disabled className="w-full mt-3 min-h-[var(--touch)] rounded-xl bg-[var(--border)] text-[var(--muted)] font-medium cursor-not-allowed">
+                                    Захиалах боломжгүй
                                 </button>
                             </div>
                         ) : (
                             <button
                                 onClick={() => setShowModal(true)}
-                                className="w-full bg-indigo-600 border border-transparent rounded-lg py-3 px-4 flex items-center justify-center text-lg font-semibold text-white hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 transition-colors"
+                                className="btn-primary w-full flex items-center justify-center text-base"
                             >
                                 Захиалах
                             </button>
                         )}
 
-                        <p className="text-xs text-center text-gray-500 mt-4">
-                            Төлбөрийг баталгаажуулсны дараа төлнө
-                        </p>
-
-                        <div className="mt-6 space-y-3">
-                            <div className="flex justify-between text-gray-600">
-                                <span className="underline">Үндсэн үнэ</span>
-                                <span>${discountActive ? house.discount!.price : house.price}</span>
-                            </div>
-                            <div className="flex justify-between text-gray-600">
-                                <span className="underline">Үйлчилгээний хураамж</span>
-                                <span>$0</span>
-                            </div>
-                            <div className="border-t border-gray-200 pt-3 flex justify-between font-bold text-gray-900">
-                                <span>Нийт (татварын өмнө)</span>
-                                <span>${discountActive ? house.discount!.price : house.price}</span>
-                            </div>
-                        </div>
+                        <p className="text-xs text-center text-[var(--muted)] mt-4">Төлбөрийг баталгаажуулсны дараа төлнө</p>
+                        <p className="mt-4 text-sm text-[var(--muted)]">Захиалгын цонхонд огноо, хоногийн тоо, нийт дүн тооцогдоно.</p>
                     </div>
                 </div>
             </div>

@@ -36,11 +36,16 @@ export default function NewBookingPage() {
     useEffect(() => {
         const fetchHouses = async () => {
             try {
-                const querySnapshot = await getDocs(collection(db, "houses"));
-                const housesData = querySnapshot.docs.map(doc => ({
-                    id: doc.id,
-                    ...doc.data()
-                })) as House[];
+                const querySnapshot = await getDocs(collection(db, "accommodations"));
+                const housesData = querySnapshot.docs.map((d) => {
+                    const data = d.data();
+                    return {
+                        id: d.id,
+                        ...data,
+                        price: data.pricePerNight ?? data.price ?? 0,
+                        imageUrl: data.featuredImage ?? data.imageUrl,
+                    } as House;
+                });
                 setHouses(housesData);
             } catch (err) {
                 console.error("Error fetching houses:", err);

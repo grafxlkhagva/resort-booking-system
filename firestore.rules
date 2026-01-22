@@ -1,56 +1,83 @@
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
-    
+
+    // Helper: true if current user is admin
+    function isAdmin() {
+      return request.auth != null &&
+        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin';
+    }
+
     // Users collection
     match /users/{userId} {
-      // Anyone authenticated can read user profiles
-      allow read: if request.auth != null;
-      // Users can only update their own profile
-      allow write: if request.auth != null && request.auth.uid == userId;
+      // Users can read only their own profile; admins can read all
+      allow read: if request.auth != null &&
+        (request.auth.uid == userId || isAdmin());
+      // Users can only create/update/delete their own profile
+      allow create, update, delete: if request.auth != null && request.auth.uid == userId;
     }
-    
+
+    // Settings (public read for home, navbar, etc.; admin write)
+    match /settings/{docId} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+
+    // Menu categories (public read; admin write)
+    match /menu_categories/{categoryId} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+
+    // Menu items (public read; admin write)
+    match /menu_items/{itemId} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+
+    // Orders (user creates own; user reads own; admin reads/updates all)
+    match /orders/{orderId} {
+      allow read: if request.auth != null &&
+        (resource.data.userId == request.auth.uid || isAdmin());
+      allow create: if request.auth != null && request.resource.data.userId == request.auth.uid;
+      allow update, delete: if isAdmin();
+    }
+
+    // Channel manager logs (admin only)
+    match /channel_manager_logs/{logId} {
+      allow read, write: if isAdmin();
+    }
+
     // Accommodations (Houses) collection
     match /accommodations/{houseId} {
-      // Anyone can read houses
       allow read: if true;
-      // Only admins can write
-      allow write: if request.auth != null && 
-                     get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin';
+      allow write: if isAdmin();
     }
-    
+
     // Amenities collection
     match /amenities/{amenityId} {
-      // Anyone can read amenities
       allow read: if true;
-      // Only admins can write
-      allow write: if request.auth != null && 
-                     get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin';
+      allow write: if isAdmin();
     }
-    
+
     // Bookings collection
     match /bookings/{bookingId} {
-      // Users can read their own bookings, admins can read all
-      allow read: if request.auth != null && 
-                    (request.auth.uid == resource.data.userId || 
-                     get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin');
-      // Users can create their own bookings
-      allow create: if request.auth != null && request.auth.uid == request.resource.data.userId;
-      // Only admins can update/delete bookings
-      allow update, delete: if request.auth != null && 
-                              get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin';
+      // Users read own (by userId); admins read all. Manual bookings without userId only for admin.
+      allow read: if request.auth != null &&
+        (request.auth.uid == resource.data.userId || isAdmin());
+      // User create: userId == auth.uid. Admin manual: has guestDetails (no/other userId).
+      allow create: if request.auth != null &&
+        ((request.resource.data.userId == request.auth.uid) ||
+         (isAdmin() && 'guestDetails' in request.resource.data));
+      allow update, delete: if isAdmin();
     }
-    
+
     // Reviews collection
     match /reviews/{reviewId} {
-      // Anyone can read reviews
       allow read: if true;
-      // Authenticated users can create reviews
       allow create: if request.auth != null && request.auth.uid == request.resource.data.userId;
-      // Users can update/delete their own reviews, admins can do anything
-      allow update, delete: if request.auth != null && 
-                              (request.auth.uid == resource.data.userId || 
-                               get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin');
+      allow update, delete: if request.auth != null &&
+        (request.auth.uid == resource.data.userId || isAdmin());
     }
   }
 }

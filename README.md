@@ -2,6 +2,8 @@
 
 A modern, responsive booking system for a small resort, built with Next.js, Tailwind CSS, and Firebase.
 
+> **Танилцуулга (Монгол):** Дэлгэрэнгүй системийн танилцуулга, эрх, үйлдлүүд, өгөгдлийн бүтэц — [ТАНИЛЦУУЛГА.md](./ТАНИЛЦУУЛГА.md)
+
 ## Features
 
 - **User Role**: Browse houses, view details, book houses, view personal bookings.

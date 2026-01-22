@@ -63,7 +63,7 @@ export async function saveChannelSettings(settings: ChannelManagerSettings): Pro
 
 export async function mapHouseToChannel(houseId: string, roomId: string): Promise<{ success: boolean; error?: string }> {
     try {
-        const houseRef = doc(db, "houses", houseId);
+        const houseRef = doc(db, "accommodations", houseId);
         // We need to merge this into the existing channelMappings map
         // Construct the update object. Since Firestore map fields can be updated with dot notation:
         await updateDoc(houseRef, {
@@ -105,7 +105,7 @@ export async function triggerSync(type: 'inventory' | 'reservation'): Promise<{ 
         }
 
         // 2. Fetch all houses with mappings
-        const housesRef = collection(db, "houses");
+        const housesRef = collection(db, "accommodations");
         const housesSnap = await getDocs(housesRef);
         const mappedHouses = housesSnap.docs.filter(doc => {
             const data = doc.data() as House;

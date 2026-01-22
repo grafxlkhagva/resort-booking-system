@@ -70,7 +70,6 @@ export default function QuickBookingModal({ isOpen, onClose, houses, preSelected
             const newBooking: Omit<Booking, 'id'> = {
                 houseId: selectedHouseId,
                 houseName: house.name,
-                userId: 'manual_admin', // Placeholder for manual bookings
                 guestDetails: {
                     firstName: guestFirstName,
                     lastName: guestLastName,
