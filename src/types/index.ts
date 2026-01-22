@@ -120,6 +120,26 @@ export interface ResortSettings {
         chatId: string;
         isActive: boolean;
     };
+    channelManager?: {
+        isActive: boolean;
+        provider: 'booking.com';
+        hotelId: string;
+        username: string;
+        password?: string; // stored securely or just for API mocking
+    };
+}
+
+// ... existing types ...
+
+export interface House {
+    // ... existing fields ...
+    channelMappings?: {
+        [key: string]: { // e.g., 'bookingDotCom'
+            roomId: string;
+            rateId?: string;
+            isSyncing: boolean;
+        }
+    };
 }
 
 export interface Review {

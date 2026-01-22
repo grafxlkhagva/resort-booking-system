@@ -4,7 +4,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import Link from "next/link";
 import { useRouter, usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
-import { Home, Calendar, Settings, Users, LogOut, Menu, X } from "lucide-react";
+import { Home, Calendar, Settings, Users, LogOut, Menu, X, Server } from "lucide-react";
 import { signOut } from "firebase/auth";
 import { auth } from "@/lib/firebase";
 
@@ -47,6 +47,7 @@ export default function AdminLayout({
         { href: "/admin", label: "Самбар", icon: Home },
         { href: "/admin/bookings", label: "Захиалгууд", icon: Calendar },
         { href: "/admin/operations", label: "Housekeeping", icon: Settings }, // Using Settings temporarily as icon or import broom/clipboard
+        { href: "/admin/channel-manager", label: "Channel Manager", icon: Server },
         { href: "/admin/users", label: "Хэрэглэгчид", icon: Users },
         { href: "/admin/settings", label: "Тохиргоо", icon: Settings },
     ];
