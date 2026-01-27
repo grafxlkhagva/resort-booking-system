@@ -5,7 +5,7 @@ import Link from "next/link";
 import { useAuth } from "@/contexts/AuthContext";
 import { signOut } from "firebase/auth";
 import { auth, db } from "@/lib/firebase";
-import { useRouter } from "next/navigation";
+import { useRouter, usePathname } from "next/navigation";
 import { doc, onSnapshot } from "firebase/firestore";
 import { Menu, X, UtensilsCrossed, User, LogOut, LayoutDashboard, Home } from "lucide-react";
 import LanguageSelector from "./LanguageSelector";
@@ -14,7 +14,10 @@ import { useLanguage } from "@/contexts/LanguageContext";
 export default function Navbar() {
   const { user, isAdmin } = useAuth();
   const router = useRouter();
+  const pathname = usePathname();
   const { t } = useLanguage();
+  const [isScrolled, setIsScrolled] = useState(false);
+  const [mounted, setMounted] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
   const [branding, setBranding] = useState({
     siteName: "ResortBook",
@@ -25,6 +28,12 @@ export default function Navbar() {
   });
 
   useEffect(() => {
+    setMounted(true);
+    const handleScroll = () => {
+      setIsScrolled(window.scrollY > 10);
+    };
+    window.addEventListener("scroll", handleScroll);
+
     const docRef = doc(db, "settings", "general");
     const unsubscribe = onSnapshot(
       docRef,
@@ -38,7 +47,11 @@ export default function Navbar() {
       },
       (error) => console.error("Error fetching branding:", error)
     );
-    return () => unsubscribe();
+
+    return () => {
+      unsubscribe();
+      window.removeEventListener("scroll", handleScroll);
+    };
   }, []);
 
   const handleLogout = async () => {
@@ -53,10 +66,18 @@ export default function Navbar() {
     { href: "/restaurant", label: t('nav_restaurant', 'Ресторан'), icon: UtensilsCrossed },
   ];
 
+  const isHomePage = pathname === '/';
+  // Combined condition for transparent hero navbar
+  // 'mounted' check prevents hydration mismatch
+  const isTransparent = isHomePage && !isScrolled && mounted;
+
   return (
-    <header className="sticky top-0 z-50 bg-[var(--card)] border-b border-[var(--border)] safe-top shadow-[var(--shadow)]">
+    <header className={`sticky top-0 z-50 transition-all duration-300 safe-top ${isTransparent
+        ? 'bg-transparent border-b-transparent shadow-none'
+        : 'bg-white/80 dark:bg-slate-900/80 backdrop-blur-md border-b border-[var(--border)] shadow-lg'
+      }`}>
       <div className="content-padding max-w-7xl mx-auto">
-        <div className="flex items-center justify-between h-14 sm:h-16">
+        <div className="flex items-center justify-between h-14 sm:h-20">
           {/* Logo */}
           <Link
             href="/"
@@ -67,19 +88,25 @@ export default function Navbar() {
               <img src={branding.logoUrl} alt="" className="h-9 w-auto object-contain" />
             )}
             {branding.showName && (
-              <span className="text-lg sm:text-xl font-bold" style={{ color: branding.siteNameColor }}>
+              <span
+                className={`text-xl sm:text-2xl font-black tracking-tighter transition-colors ${isTransparent ? 'text-white' : ''}`}
+                style={{ color: isTransparent ? undefined : branding.siteNameColor }}
+              >
                 {branding.siteName}
               </span>
             )}
           </Link>
 
           {/* Desktop nav */}
-          <nav className="hidden md:flex items-center gap-1">
+          <nav className="hidden md:flex items-center gap-2">
             {navLinks.map((l) => (
               <Link
                 key={l.href}
                 href={l.href}
-                className="px-3 py-2 rounded-xl text-[var(--foreground)]/80 hover:text-[var(--primary)] hover:bg-[var(--primary)]/5 text-sm font-medium transition-colors"
+                className={`px-4 py-2 rounded-2xl text-sm font-bold transition-all ${isTransparent
+                    ? 'text-white hover:bg-white/10'
+                    : 'text-[var(--foreground)]/80 hover:text-[var(--primary)] hover:bg-[var(--primary)]/5'
+                  }`}
               >
                 {l.label}
               </Link>
@@ -87,7 +114,10 @@ export default function Navbar() {
             {isAdmin && (
               <Link
                 href="/admin"
-                className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-[var(--foreground)]/80 hover:text-[var(--primary)] hover:bg-[var(--primary)]/5 text-sm font-medium transition-colors"
+                className={`flex items-center gap-1.5 px-4 py-2 rounded-2xl text-sm font-bold transition-all ${isTransparent
+                    ? 'text-white hover:bg-white/10'
+                    : 'text-[var(--foreground)]/80 hover:text-[var(--primary)] hover:bg-[var(--primary)]/5'
+                  }`}
               >
                 <LayoutDashboard size={16} /> {t('nav_admin', 'Самбар')}
               </Link>
@@ -96,13 +126,19 @@ export default function Navbar() {
               <>
                 <Link
                   href="/profile"
-                  className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-[var(--foreground)]/80 hover:text-[var(--primary)] hover:bg-[var(--primary)]/5 text-sm font-medium transition-colors"
+                  className={`flex items-center gap-1.5 px-4 py-2 rounded-2xl text-sm font-bold transition-all ${isTransparent
+                      ? 'text-white hover:bg-white/10'
+                      : 'text-[var(--foreground)]/80 hover:text-[var(--primary)] hover:bg-[var(--primary)]/5'
+                    }`}
                 >
                   <User size={16} /> {t('nav_my_bookings', 'Захиалгууд')}
                 </Link>
                 <button
                   onClick={handleLogout}
-                  className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-[var(--foreground)]/80 hover:text-red-600 hover:bg-red-500/5 text-sm font-medium transition-colors"
+                  className={`flex items-center gap-1.5 px-4 py-2 rounded-2xl text-sm font-bold transition-all ${isTransparent
+                      ? 'text-white/80 hover:text-red-400 hover:bg-white/10'
+                      : 'text-[var(--foreground)]/80 hover:text-red-600 hover:bg-red-500/5'
+                    }`}
                 >
                   <LogOut size={16} /> {t('nav_logout', 'Гарах')}
                 </button>
@@ -110,12 +146,15 @@ export default function Navbar() {
             ) : (
               <Link
                 href="/login"
-                className="btn-primary inline-flex items-center justify-center px-4 text-sm"
+                className={`px-6 py-2.5 rounded-2xl text-sm font-bold transition-all shadow-lg ${isTransparent
+                    ? 'bg-white text-[var(--primary)] hover:bg-gray-100'
+                    : 'bg-[var(--primary)] text-white hover:bg-[var(--primary-hover)]'
+                  }`}
               >
                 {t('nav_login', 'Нэвтрэх')}
               </Link>
             )}
-            <div className="ml-1 border-l border-[var(--border)] pl-1">
+            <div className={`ml-2 border-l pl-2 transition-colors ${isTransparent ? 'border-white/20' : 'border-[var(--border)]'}`}>
               <LanguageSelector />
             </div>
           </nav>
@@ -124,7 +163,8 @@ export default function Navbar() {
           <div className="flex md:hidden items-center gap-1">
             <Link
               href="/restaurant"
-              className="touch-target flex items-center justify-center p-2.5 rounded-xl text-[var(--foreground)]/80 hover:bg-[var(--primary)]/10 hover:text-[var(--primary)]"
+              className={`touch-target flex items-center justify-center p-2.5 rounded-xl transition-colors ${isTransparent ? 'text-white' : 'text-[var(--foreground)]/80'
+                }`}
               aria-label="Ресторан"
             >
               <UtensilsCrossed size={22} />
@@ -132,7 +172,8 @@ export default function Navbar() {
             <LanguageSelector />
             <button
               onClick={() => setMenuOpen((o) => !o)}
-              className="touch-target flex items-center justify-center p-2.5 rounded-xl text-[var(--foreground)]/80 hover:bg-[var(--primary)]/10"
+              className={`touch-target flex items-center justify-center p-2.5 rounded-xl transition-colors ${isTransparent ? 'text-white' : 'text-[var(--foreground)]/80'
+                }`}
               aria-label={menuOpen ? "Цэс хаах" : "Цэс нээх"}
             >
               {menuOpen ? <X size={24} /> : <Menu size={24} />}
