@@ -5,6 +5,7 @@ import { auth, db } from "@/lib/firebase";
 import { RecaptchaVerifier, signInWithPhoneNumber, ConfirmationResult } from "firebase/auth";
 import { doc, updateDoc } from "firebase/firestore";
 import { X, Phone } from "lucide-react";
+import { useLanguage } from "@/contexts/LanguageContext";
 
 interface PhoneVerificationModalProps {
     userId: string;
@@ -20,6 +21,7 @@ export default function PhoneVerificationModal({ userId, onVerified, onClose }: 
     const [error, setError] = useState("");
     const [confirmationResult, setConfirmationResult] = useState<ConfirmationResult | null>(null);
     const [recaptchaVerifier, setRecaptchaVerifier] = useState<RecaptchaVerifier | null>(null);
+    const { t } = useLanguage();
 
     useEffect(() => {
         // Initialize reCAPTCHA after component mounts and DOM is ready
@@ -39,13 +41,13 @@ export default function PhoneVerificationModal({ userId, onVerified, onClose }: 
                         },
                         'expired-callback': () => {
                             console.log('reCAPTCHA expired');
-                            setError("reCAPTCHA хугацаа дууссан. Дахин оролдоно уу.");
+                            setError(t('recaptcha_expired', 'reCAPTCHA хугацаа дууссан. Дахин оролдоно уу.'));
                         }
                     });
                     setRecaptchaVerifier(verifier);
                 } catch (error) {
                     console.error("reCAPTCHA initialization error:", error);
-                    setError("reCAPTCHA эхлүүлэхэд алдаа гарлаа.");
+                    setError(t('booking_error', 'reCAPTCHA эхлүүлэхэд алдаа гарлаа.'));
                 }
             }
         };
@@ -67,7 +69,7 @@ export default function PhoneVerificationModal({ userId, onVerified, onClose }: 
 
     const sendOTP = async () => {
         if (!phoneNumber || phoneNumber.length < 12) {
-            setError("Утасны дугаараа зөв оруулна уу. Жишээ: +97699123456");
+            setError(t('invalid_phone_error', 'Утасны дугаараа зөв оруулна уу. Жишээ: +97699123456'));
             return;
         }
 
@@ -76,7 +78,7 @@ export default function PhoneVerificationModal({ userId, onVerified, onClose }: 
 
         try {
             if (!recaptchaVerifier) {
-                throw new Error("reCAPTCHA тохируулагдаагүй байна");
+                throw new Error(t('recaptcha_error', 'reCAPTCHA тохируулагдаагүй байна'));
             }
 
             const confirmation = await signInWithPhoneNumber(auth, phoneNumber, recaptchaVerifier);
@@ -86,11 +88,11 @@ export default function PhoneVerificationModal({ userId, onVerified, onClose }: 
             console.error("Error sending OTP:", err);
             const errorObj = err as { code?: string };
             if (errorObj.code === 'auth/invalid-phone-number') {
-                setError("Утасны дугаар буруу байна.");
+                setError(t('otp_invalid_error', 'Утасны дугаар буруу байна.'));
             } else if (errorObj.code === 'auth/too-many-requests') {
-                setError("Хэт олон оролдлого хийсэн байна. Түр хүлээгээд дахин оролдоно уу.");
+                setError(t('too_many_requests', 'Хэт олон оролдлого хийсэн байна. Түр хүлээгээд дахин оролдоно уу.'));
             } else {
-                setError("OTP илгээхэд алдаа гарлаа. Дахин оролдоно уу.");
+                setError(t('booking_error', 'OTP илгээхэд алдаа гарлаа. Дахин оролдоно уу.'));
             }
             // Reset reCAPTCHA
             if (recaptchaVerifier) {
@@ -107,12 +109,12 @@ export default function PhoneVerificationModal({ userId, onVerified, onClose }: 
 
     const verifyOTP = async () => {
         if (!otp || otp.length !== 6) {
-            setError("6 оронтой кодоо оруулна уу.");
+            setError(t('otp_label', '6 оронтой кодоо оруулна уу.'));
             return;
         }
 
         if (!confirmationResult) {
-            setError("Эхлээд утасны дугаараа оруулна уу.");
+            setError(t('invalid_phone_error', 'Эхлээд утасны дугаараа оруулна уу.'));
             return;
         }
 
@@ -133,12 +135,12 @@ export default function PhoneVerificationModal({ userId, onVerified, onClose }: 
             console.error("Error verifying OTP:", err);
             const errorObj = err as { code?: string };
             if (errorObj.code === 'auth/invalid-verification-code') {
-                setError("Код буруу байна. Дахин оролдоно уу.");
+                setError(t('otp_invalid_error', 'Код буруу байна. Дахин оролдоно уу.'));
             } else if (errorObj.code === 'auth/code-expired') {
-                setError("Кодын хугацаа дууссан байна. Шинээр код авна уу.");
+                setError(t('otp_expired_error', 'Кодын хугацаа дууссан байна. Шинээр код авна уу.'));
                 setStep("phone");
             } else {
-                setError("Баталгаажуулахад алдаа гарлаа. Дахин оролдоно уу.");
+                setError(t('booking_error', 'Баталгаажуулахад алдаа гарлаа. Дахин оролдоно уу.'));
             }
         } finally {
             setLoading(false);
@@ -167,12 +169,12 @@ export default function PhoneVerificationModal({ userId, onVerified, onClose }: 
                         <Phone className="h-6 w-6 text-indigo-600" />
                     </div>
                     <h2 className="text-2xl font-bold text-gray-900">
-                        {step === "phone" ? "Утасны дугаар баталгаажуулах" : "Баталгаажуулах код"}
+                        {step === "phone" ? t('verify_phone_title', 'Утасны дугаар баталгаажуулах') : t('otp_label', 'Баталгаажуулах код')}
                     </h2>
                     <p className="text-sm text-gray-500 mt-2">
                         {step === "phone"
-                            ? "Захиалга баталгаажуулахын тулд утасны дугаараа оруулна уу."
-                            : `${phoneNumber} дугаар руу илгээсэн 6 оронтой кодыг оруулна уу.`}
+                            ? t('verify_phone_subtitle', 'Захиалга баталгаажуулахын тулд утасны дугаараа оруулна уу.')
+                            : t('verify_otp_subtitle', `${phoneNumber} дугаар руу илгээсэн 6 оронтой кодыг оруулна уу.`, { phone: phoneNumber })}
                     </p>
                 </div>
 
@@ -186,7 +188,7 @@ export default function PhoneVerificationModal({ userId, onVerified, onClose }: 
                     <div className="space-y-4">
                         <div>
                             <label className="block text-sm font-medium text-gray-700 mb-1">
-                                Утасны дугаар
+                                {t('phone_label', 'Утасны дугаар')}
                             </label>
                             <input
                                 type="tel"
@@ -197,7 +199,7 @@ export default function PhoneVerificationModal({ userId, onVerified, onClose }: 
                                 disabled={loading}
                             />
                             <p className="text-xs text-gray-500 mt-1">
-                                Монголын дугаар: +976 99123456
+                                {t('phone_label_hint', 'Монгол')}: +976 99123456
                             </p>
                         </div>
 
@@ -206,14 +208,14 @@ export default function PhoneVerificationModal({ userId, onVerified, onClose }: 
                             disabled={loading}
                             className="w-full bg-indigo-600 text-white py-2 px-4 rounded-md hover:bg-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                         >
-                            {loading ? "Илгээж байна..." : "Код авах"}
+                            {loading ? t('sending', 'Илгээж байна...') : t('get_code', 'Код авах')}
                         </button>
                     </div>
                 ) : (
                     <div className="space-y-4">
                         <div>
                             <label className="block text-sm font-medium text-gray-700 mb-1">
-                                Баталгаажуулах код
+                                {t('otp_label', 'Баталгаажуулах код')}
                             </label>
                             <input
                                 type="text"
@@ -232,7 +234,7 @@ export default function PhoneVerificationModal({ userId, onVerified, onClose }: 
                             disabled={loading || otp.length !== 6}
                             className="w-full bg-indigo-600 text-white py-2 px-4 rounded-md hover:bg-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                         >
-                            {loading ? "Баталгаажуулж байна..." : "Баталгаажуулах"}
+                            {loading ? t('verifying', 'Баталгаажуулж байна...') : t('verify_title', 'Баталгаажуулах')}
                         </button>
 
                         <button
@@ -240,7 +242,7 @@ export default function PhoneVerificationModal({ userId, onVerified, onClose }: 
                             disabled={loading}
                             className="w-full text-indigo-600 py-2 px-4 rounded-md hover:bg-indigo-50 disabled:opacity-50 transition-colors text-sm"
                         >
-                            Код дахин авах
+                            {t('resend_code', 'Код дахин авах')}
                         </button>
                     </div>
                 )}

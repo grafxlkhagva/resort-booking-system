@@ -11,29 +11,22 @@ import { ArrowLeft, CheckCircle, XCircle, Clock, Home, PenTool, RefreshCw, Send,
 import Link from "next/link";
 import { format, startOfDay, endOfDay } from "date-fns";
 import { sendDailyReportAction } from "@/actions/telegram";
+import { useLanguage } from "@/contexts/LanguageContext";
 
 // Vercel Rebuild Trigger
-
-
-const STATUS_LABELS: Record<HouseStatus, string> = {
-    clean: "Цэвэр",
-    dirty: "Бохир",
-    cleaning: "Цэвэрлэж байна",
-    occupied: "Хүнтэй",
-    maintenance: "Засвартай",
-};
-
-const STATUS_COLORS: Record<HouseStatus, string> = {
-    clean: "bg-green-100 text-green-800 border-green-200",
-    dirty: "bg-red-100 text-red-800 border-red-200",
-    cleaning: "bg-yellow-100 text-yellow-800 border-yellow-200",
-    occupied: "bg-indigo-100 text-indigo-800 border-indigo-200",
-    maintenance: "bg-gray-100 text-gray-800 border-gray-200",
-};
 
 export default function HouseOperationsPage() {
     const { user, isAdmin, loading } = useAuth();
     const router = useRouter();
+    const { t } = useLanguage();
+
+    const STATUS_LABELS: Record<HouseStatus, string> = {
+        clean: t('admin_house_clean', "Цэвэр"),
+        dirty: t('admin_house_dirty', "Бохир"),
+        cleaning: t('admin_cleaning', "Цэвэрлэж байна"),
+        occupied: t('admin_house_occupied', "Хүнтэй"),
+        maintenance: t('admin_house_maintenance', "Засвартай"),
+    };
     const [houses, setHouses] = useState<House[]>([]);
     const [bookings, setBookings] = useState<Booking[]>([]);
     const [updatingId, setUpdatingId] = useState<string | null>(null);
@@ -132,12 +125,12 @@ export default function HouseOperationsPage() {
 
             let details = "";
             if (checkIns > 0) {
-                details += "\n📥 <b>Ирэх (" + checkIns + "):</b>\n" +
-                    getCheckIns().map(b => " - " + b.houseName + ": " + (b.guestDetails?.firstName || 'Guest') + " (" + (b.guestDetails?.phoneNumber || '-') + ")").join("\n");
+                details += "\n" + `📥 <b>Ирэх (${checkIns}):</b>` + "\n" +
+                    getCheckIns().map(b => " - " + b.houseName + ": " + (b.guestDetails?.firstName || "Зочин") + " (" + (b.guestDetails?.phoneNumber || '-') + ")").join("\n");
             }
             if (checkOuts > 0) {
-                details += "\n\n📤 <b>Явах (" + checkOuts + "):</b>\n" +
-                    getCheckOuts().map(b => " - " + b.houseName + ": " + (b.guestDetails?.firstName || 'Guest')).join("\n");
+                details += "\n\n" + `📤 <b>Явах (${checkOuts}):</b>` + "\n" +
+                    getCheckOuts().map(b => " - " + b.houseName + ": " + (b.guestDetails?.firstName || "Зочин")).join("\n");
             }
 
             if (!details) details = "Өнөөдөр онцлох хөдөлгөөн байхгүй байна.";
@@ -151,11 +144,11 @@ export default function HouseOperationsPage() {
             });
 
             if (result.success) alert("Тайлан Telegram руу амжилттай илгээгдлээ!");
-            else alert("Тайлан илгээхэд алдаа гарлаа: " + (result.error || "Unknown Error"));
+            else alert(`Тайлан илгээхэд алдаа гарлаа: ${result.error || "Unknown Error"}`);
 
         } catch (error: any) {
             console.error(error);
-            alert("Алдаа гарлаа: " + (error.message || error));
+            alert(`Алдаа гарлаа: ${error.message || error}`);
         } finally {
             setSendingReport(false);
         }
@@ -171,7 +164,7 @@ export default function HouseOperationsPage() {
             await updateDoc(doc(db, "accommodations", houseId), updateData);
         } catch (err) {
             console.error("Failed to update status", err);
-            alert("Failed to update status");
+            alert(t('error_update_status', "Failed to update status"));
         } finally {
             setUpdatingId(null);
         }

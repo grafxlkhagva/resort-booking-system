@@ -10,11 +10,14 @@ import { Trash2, ArrowLeft, Home, ShoppingBag, CheckCircle } from "lucide-react"
 import Link from "next/link";
 import { startOfDay, endOfDay } from "date-fns";
 import { House, Booking } from "@/types";
+import { sendFoodOrderNotificationAction } from "@/actions/telegram";
+import { useLanguage } from "@/contexts/LanguageContext";
 
 export default function CheckoutPage() {
     const { items, removeFromCart, updateQuantity, totalAmount, clearCart } = useCart();
     const { user, loading: authLoading } = useAuth();
     const router = useRouter();
+    const { currentLanguage, t } = useLanguage();
 
     const [submitting, setSubmitting] = useState(false);
     const [deliveryType, setDeliveryType] = useState<"house" | "pickup">("house");
@@ -115,12 +118,12 @@ export default function CheckoutPage() {
         if (items.length === 0) return;
 
         if (minOrderAmount != null && totalAmount < minOrderAmount) {
-            alert(`Доод захиалгын дүн: ${minOrderAmount.toLocaleString()}₮. Таны сагс: ${totalAmount.toLocaleString()}₮`);
+            alert(t('min_order_error', `Доод захиалгын дүн: ${minOrderAmount.toLocaleString()}₮. Таны сагс: ${totalAmount.toLocaleString()}₮`, { min: minOrderAmount.toLocaleString(), total: totalAmount.toLocaleString() }));
             return;
         }
 
         if (unavailableCartIds.length > 0) {
-            alert("Сагсанд одоо боломжгүй бүтээгдэхүүн байна. Сагснаас хасаад дахин оролдоно уу.");
+            alert(t('unavailable_items_error', 'Сагсанд одоо боломжгүй бүтээгдэхүүн байна. Сагснаас хасаад дахин оролдоно уу.'));
             return;
         }
 
@@ -148,13 +151,28 @@ export default function CheckoutPage() {
                 note
             };
 
-            await addDoc(collection(db, "orders"), orderData);
+            const orderRef = await addDoc(collection(db, "orders"), orderData);
+
+            // Send Telegram notification to admin
+            try {
+                await sendFoodOrderNotificationAction(
+                    orderRef.id,
+                    user.displayName || user.email || "Зочин",
+                    items.map(i => ({ name: i.name, quantity: i.quantity, price: i.price })),
+                    totalAmount,
+                    deliveryType,
+                    activeBooking?.house?.name,
+                    user.phoneNumber || undefined
+                );
+            } catch (err) {
+                console.error("Failed to send food order notification:", err);
+            }
 
             clearCart();
             router.push("/restaurant?order=success");
         } catch (error) {
             console.error("Error placing order:", error);
-            alert("Захиалга илгээхэд алдаа гарлаа. Дахин оролдоно уу.");
+            alert(t('order_error', 'Захиалга илгээхэд алдаа гарлаа. Дахин оролдоно уу.'));
         } finally {
             setSubmitting(false);
         }
@@ -164,10 +182,10 @@ export default function CheckoutPage() {
         return (
             <div className="min-h-screen flex flex-col items-center justify-center p-4">
                 <ShoppingBag size={56} className="text-[var(--muted-foreground)] mb-4" />
-                <h2 className="text-xl font-bold text-[var(--foreground)] mb-2">Сагс хоосон</h2>
-                <p className="text-[var(--muted)] mb-6">Одоогоор юу ч нэмэгдээгүй байна.</p>
+                <h2 className="text-xl font-bold text-[var(--foreground)] mb-2">{t('cart_empty_title', 'Сагс хоосон')}</h2>
+                <p className="text-[var(--muted)] mb-6">{t('cart_empty_info', 'Одоогоор юу ч нэмэгдээгүй байна.')}</p>
                 <Link href="/restaurant" className="btn-primary inline-flex px-6">
-                    Цэс рүү
+                    {t('nav_restaurant', 'Цэс рүү')}
                 </Link>
             </div>
         );
@@ -177,21 +195,21 @@ export default function CheckoutPage() {
         <div className="min-h-screen content-padding">
             <div className="max-w-4xl mx-auto">
                 <Link href="/restaurant" className="inline-flex items-center gap-2 text-[var(--muted)] hover:text-[var(--primary)] mb-6">
-                    <ArrowLeft size={18} /> Цэс рүү буцах
+                    <ArrowLeft size={18} /> {t('back_to_menu', 'Цэс рүү буцах')}
                 </Link>
 
                 {unavailableCartIds.length > 0 && (
                     <div className="mb-6 p-4 rounded-xl bg-amber-50 border border-amber-200">
-                        <p className="text-amber-800 font-medium mb-2">Одоо боломжгүй: {items.filter((i) => unavailableCartIds.includes(i.menuItemId)).map((i) => i.name).join(", ")}</p>
+                        <p className="text-amber-800 font-medium mb-2">{t('now_unavailable', 'Одоо боломжгүй')}: {items.filter((i) => unavailableCartIds.includes(i.menuItemId)).map((i) => i.name).join(", ")}</p>
                         <button type="button" onClick={() => { unavailableCartIds.forEach((id) => removeFromCart(id)); setUnavailableCartIds([]); }} className="text-sm text-amber-700 underline hover:no-underline">
-                            Сагснаас хасах
+                            {t('remove_from_cart', 'Сагснаас хасах')}
                         </button>
                     </div>
                 )}
 
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 lg:gap-8">
                     <div className="card overflow-hidden p-5 sm:p-6">
-                        <h2 className="text-lg font-bold text-[var(--foreground)] mb-5">Захиалгын дэлгэрэнгүй</h2>
+                        <h2 className="text-lg font-bold text-[var(--foreground)] mb-5">{t('order_details', 'Захиалгын дэлгэрэнгүй')}</h2>
                         <ul className="divide-y divide-[var(--border)]">
                             {items.map((item) => (
                                 <li key={item.menuItemId} className="py-4 flex gap-4">
@@ -223,67 +241,67 @@ export default function CheckoutPage() {
                             ))}
                         </ul>
                         <div className="border-t border-[var(--border)] mt-5 pt-4 flex justify-between items-center">
-                            <span className="font-bold text-[var(--foreground)]">Нийт</span>
+                            <span className="font-bold text-[var(--foreground)]">{t('total', 'Нийт')}</span>
                             <span className="text-xl font-bold text-[var(--primary)]">${totalAmount}</span>
                         </div>
                     </div>
 
                     <div className="space-y-5">
                         <div className="card p-5 sm:p-6">
-                            <h2 className="font-bold text-[var(--foreground)] mb-4">Хүргэлтийн сонголт</h2>
+                            <h2 className="font-bold text-[var(--foreground)] mb-4">{t('delivery_option', 'Хүргэлтийн сонголт')}</h2>
                             <div className="space-y-3">
                                 <label className={`flex items-start gap-3 border rounded-xl p-4 cursor-pointer transition ${deliveryType === "house" ? "border-[var(--primary)] bg-[var(--primary)]/5 ring-1 ring-[var(--primary)]" : "border-[var(--border)] hover:border-[var(--muted)]"}`}>
                                     <input type="radio" name="delivery" value="house" checked={deliveryType === "house"} onChange={() => setDeliveryType("house")} className="mt-1 h-4 w-4 text-[var(--primary)]" />
                                     <div className="flex-1 min-w-0">
                                         <div className="flex items-center justify-between gap-2">
-                                            <span className="font-medium text-[var(--foreground)]">Байшинд хүргэх</span>
+                                            <span className="font-medium text-[var(--foreground)]">{t('delivery_house', 'Байшинд хүргэх')}</span>
                                             <Home size={18} className="text-[var(--muted)] flex-shrink-0" />
                                         </div>
                                         {deliveryType === "house" && (
                                             <div className="mt-2 text-sm text-[var(--muted)]">
-                                                {loadingBooking ? "Шалгаж байна…" : activeBooking ? (
+                                                {loadingBooking ? t('checking_booking', 'Шалгаж байна…') : activeBooking ? (
                                                     <span className="text-green-600 flex items-center gap-1 font-medium">
-                                                        <CheckCircle size={14} /> {activeBooking.house.name} (#{activeBooking.house.houseNumber})
+                                                        <CheckCircle size={14} /> {activeBooking.house.localizedNames?.[currentLanguage] || activeBooking.house.name} (#{activeBooking.house.houseNumber})
                                                     </span>
                                                 ) : (
-                                                    <span className="text-amber-600">Идэвхтэй захиалга олдсонгүй. Байршил асууна.</span>
+                                                    <span className="text-amber-600">{t('no_active_booking', 'Идэвхтэй захиалга олдсонгүй. Байршил асууна.')}</span>
                                                 )}
                                             </div>
                                         )}
                                     </div>
                                 </label>
-                                <label className={`flex items-start gap-3 border rounded-xl p-4 cursor-pointer transition ${deliveryType === "pickup" ? "border-[var(--primary)] bg-[var(--primary)]/5 ring-1 ring-[var(--primary)]" : "border-[var(--border)] hover:border-[var(--muted)]"}`}>
+                                <label className={`flex items-start gap-3 border rounded-xl p-4 cursor-pointer transition ${deliveryType === "pickup" ? "border-[var(--primary)] bg-[var(--primary)]/5 ring-1 ring-[var(--primary)]" : "border-[var(--border)] hover:border(--muted)]"}`}>
                                     <input type="radio" name="delivery" value="pickup" checked={deliveryType === "pickup"} onChange={() => setDeliveryType("pickup")} className="mt-1 h-4 w-4 text-[var(--primary)]" />
                                     <div>
-                                        <span className="font-medium text-[var(--foreground)]">Ресторан дээр авах</span>
-                                        <span className="block text-sm text-[var(--muted)]">Бэлэн болоход мэдэгдэнэ.</span>
+                                        <span className="font-medium text-[var(--foreground)]">{t('delivery_pickup', 'Ресторан дээр авах')}</span>
+                                        <span className="block text-sm text-[var(--muted)]">{t('pickup_info', 'Бэлэн болоход мэдэгдэнэ.')}</span>
                                     </div>
                                 </label>
                             </div>
                         </div>
 
                         <div className="card p-5 sm:p-6">
-                            <h2 className="font-bold text-[var(--foreground)] mb-4">Нэмэлт тайлбар</h2>
+                            <h2 className="font-bold text-[var(--foreground)] mb-4">{t('additional_note', 'Нэмэлт тайлбар')}</h2>
                             <textarea
                                 value={note}
                                 onChange={(e) => setNote(e.target.value)}
                                 className="w-full rounded-xl border border-[var(--border)] bg-[var(--card)] px-4 py-3 focus:outline-none focus:ring-2 focus:ring-[var(--primary)] text-sm resize-none"
                                 rows={3}
-                                placeholder="Харшил, тусгай хүсэлт гэх мэт"
+                                placeholder={t('note_placeholder', 'Харшил, тусгай хүсэлт гэх мэт')}
                             />
                         </div>
 
                         {minOrderAmount != null && totalAmount > 0 && totalAmount < minOrderAmount && (
-                            <p className="text-sm text-amber-600">Доод дүн: {minOrderAmount.toLocaleString()}₮</p>
+                            <p className="text-sm text-amber-600">{t('min_order_rate', 'Доод дүн')}: {minOrderAmount.toLocaleString()}₮</p>
                         )}
                         <button
                             onClick={handlePlaceOrder}
                             disabled={submitting || (minOrderAmount != null && totalAmount < minOrderAmount) || unavailableCartIds.length > 0}
                             className="btn-primary w-full py-4 text-base"
                         >
-                            {submitting ? "Илгээж байна…" : `Захиалга илгээх · $${totalAmount}`}
+                            {submitting ? t('sending', 'Илгээж байна…') : `${t('place_order', 'Захиалга илгээх')} · $${totalAmount}`}
                         </button>
-                        {!user && <p className="text-sm text-center text-[var(--muted)]">Захиалга илгээхийн тулд нэвтэрнэ үү.</p>}
+                        {!user && <p className="text-sm text-center text-[var(--muted)]">{t('login_to_order', 'Захиалга илгээхийн тулд нэвтэрнэ үү.')}</p>}
                     </div>
                 </div>
             </div>

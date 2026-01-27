@@ -6,6 +6,7 @@ import { RecaptchaVerifier, signInWithPhoneNumber, ConfirmationResult } from "fi
 import { doc, setDoc, getDoc, serverTimestamp } from "firebase/firestore";
 import { useRouter } from "next/navigation";
 import { Phone } from "lucide-react";
+import { useLanguage } from "@/contexts/LanguageContext";
 
 export default function LoginPage() {
     const [step, setStep] = useState<"phone" | "otp">("phone");
@@ -16,6 +17,7 @@ export default function LoginPage() {
     const [confirmationResult, setConfirmationResult] = useState<ConfirmationResult | null>(null);
     const [recaptchaVerifier, setRecaptchaVerifier] = useState<RecaptchaVerifier | null>(null);
     const router = useRouter();
+    const { t } = useLanguage();
 
     useEffect(() => {
         // Initialize reCAPTCHA after DOM is ready
@@ -68,7 +70,7 @@ export default function LoginPage() {
 
     const sendOTP = async () => {
         if (!phoneNumber || phoneNumber.length < 12) {
-            setError("Утасны дугаараа зөв оруулна уу. Жишээ: +97699123456");
+            setError(t('invalid_phone_error', 'Утасны дугаараа зөв оруулна уу. Жишээ: +97699123456'));
             return;
         }
 
@@ -77,20 +79,19 @@ export default function LoginPage() {
 
         try {
             if (!recaptchaVerifier) {
-                throw new Error("reCAPTCHA тохируулагдаагүй байна");
+                throw new Error(t('recaptcha_error', 'reCAPTCHA тохируулагдаагүй байна'));
             }
 
             const confirmation = await signInWithPhoneNumber(auth, phoneNumber, recaptchaVerifier);
             setConfirmationResult(confirmation);
             setStep("otp");
         } catch (err: any) {
-            console.error("Error sending OTP:", err);
             if (err.code === 'auth/invalid-phone-number') {
-                setError("Утасны дугаар буруу байна.");
+                setError(t('otp_invalid_error', 'Утасны дугаар буруу байна.'));
             } else if (err.code === 'auth/too-many-requests') {
-                setError("Хэт олон оролдлого хийсэн байна. Түр хүлээгээд дахин оролдоно уу.");
+                setError(t('too_many_requests', 'Хэт олон оролдлого хийсэн байна. Түр хүлээгээд дахин оролдоно уу.'));
             } else {
-                setError("OTP илгээхэд алдаа гарлаа. Дахин оролдоно уу.");
+                setError(t('booking_error', 'OTP илгээхэд алдаа гарлаа. Дахин оролдоно уу.'));
             }
             // Reset reCAPTCHA
             if (recaptchaVerifier) {
@@ -107,12 +108,12 @@ export default function LoginPage() {
 
     const verifyOTP = async () => {
         if (!otp || otp.length !== 6) {
-            setError("6 оронтой кодоо оруулна уу.");
+            setError(t('otp_label', '6 оронтой кодоо оруулна уу.'));
             return;
         }
 
         if (!confirmationResult) {
-            setError("Эхлээд утасны дугаараа оруулна уу.");
+            setError(t('invalid_phone_error', 'Эхлээд утасны дугаараа оруулна уу.'));
             return;
         }
 
@@ -148,12 +149,12 @@ export default function LoginPage() {
         } catch (err: any) {
             console.error("Error verifying OTP:", err);
             if (err.code === 'auth/invalid-verification-code') {
-                setError("Код буруу байна. Дахин оролдоно уу.");
+                setError(t('otp_invalid_error', 'Код буруу байна. Дахин оролдоно уу.'));
             } else if (err.code === 'auth/code-expired') {
-                setError("Кодын хугацаа дууссан байна. Шинээр код авна уу.");
+                setError(t('otp_expired_error', 'Кодын хугацаа дууссан байна. Шинээр код авна уу.'));
                 setStep("phone");
             } else {
-                setError("Баталгаажуулахад алдаа гарлаа. Дахин оролдоно уу.");
+                setError(t('booking_error', 'Баталгаажуулахад алдаа гарлаа. Дахин оролдоно уу.'));
             }
         } finally {
             setLoading(false);
@@ -175,10 +176,10 @@ export default function LoginPage() {
                         <Phone className="h-7 w-7" />
                     </div>
                     <h2 className="text-xl sm:text-2xl font-bold text-[var(--foreground)]">
-                        {step === "phone" ? "Нэвтрэх" : "Баталгаажуулах"}
+                        {step === "phone" ? t('login_page_title', 'Нэвтрэх') : t('verify_page_title', 'Баталгаажуулах')}
                     </h2>
                     <p className="mt-2 text-sm text-[var(--muted)]">
-                        {step === "phone" ? "Утасны дугаараа оруулж нэвтрэнэ үү" : `${phoneNumber} руу илгээсэн 6 оронтой кодыг оруулна уу`}
+                        {step === "phone" ? t('login_phone_subtitle', 'Утасны дугаараа оруулж нэвтрэнэ үү') : t('verify_otp_subtitle', `${phoneNumber} руу илгээсэн 6 оронтой кодыг оруулна уу`, { phone: phoneNumber })}
                     </p>
                 </div>
 
@@ -187,7 +188,7 @@ export default function LoginPage() {
                 {step === "phone" ? (
                     <div className="space-y-4">
                         <div>
-                            <label className="block text-sm font-medium text-[var(--foreground)] mb-2">Утасны дугаар</label>
+                            <label className="block text-sm font-medium text-[var(--foreground)] mb-2">{t('phone_label', 'Утасны дугаар')}</label>
                             <input
                                 type="tel"
                                 placeholder="+97699123456"
@@ -196,17 +197,17 @@ export default function LoginPage() {
                                 onChange={(e) => setPhoneNumber(e.target.value)}
                                 disabled={loading}
                             />
-                            <p className="text-xs text-[var(--muted)] mt-2">Монгол: +976 99123456</p>
+                            <p className="text-xs text-[var(--muted)] mt-2">{t('phone_label_hint', 'Монгол')}: +976 99123456</p>
                         </div>
                         <button onClick={sendOTP} disabled={loading} className="btn-primary w-full">
-                            {loading ? "Илгээж байна…" : "Код авах"}
+                            {loading ? t('sending', 'Илгээж байна…') : t('get_code', 'Код авах')}
                         </button>
-                        <p className="text-center text-sm text-[var(--muted)]">Анх удаа бол автоматаар бүртгэл үүснэ</p>
+                        <p className="text-center text-sm text-[var(--muted)]">{t('first_time_info', 'Анх удаа бол автоматаар бүртгэл үүснэ')}</p>
                     </div>
                 ) : (
                     <div className="space-y-4">
                         <div>
-                            <label className="block text-sm font-medium text-[var(--foreground)] mb-2">Баталгаажуулах код</label>
+                            <label className="block text-sm font-medium text-[var(--foreground)] mb-2">{t('otp_label', 'Баталгаажуулах код')}</label>
                             <input
                                 type="text"
                                 placeholder="123456"
@@ -219,10 +220,10 @@ export default function LoginPage() {
                             />
                         </div>
                         <button onClick={verifyOTP} disabled={loading || otp.length !== 6} className="btn-primary w-full">
-                            {loading ? "Баталгаажуулж байна…" : "Нэвтрэх"}
+                            {loading ? t('verifying', 'Баталгаажуулж байна…') : t('nav_login', 'Нэвтрэх')}
                         </button>
                         <button onClick={resendOTP} disabled={loading} className="w-full py-2.5 text-[var(--primary)] hover:bg-[var(--primary)]/10 rounded-xl text-sm font-medium transition-colors">
-                            Код дахин авах
+                            {t('resend_code', 'Код дахин авах')}
                         </button>
                     </div>
                 )}

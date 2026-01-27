@@ -36,7 +36,7 @@ export async function sendTelegramMessageAction(
 
         const url = `https://api.telegram.org/bot${telegram.botToken}/sendMessage`;
 
-        const body: any = {
+        const body: Record<string, unknown> = {
             chat_id: telegram.chatId,
             text: text,
             parse_mode: 'HTML'
@@ -62,9 +62,10 @@ export async function sendTelegramMessageAction(
         }
 
         return { success: true };
-    } catch (error: any) {
+    } catch (error: unknown) {
+        const errorMessage = error instanceof Error ? error.message : "Network Error";
         console.error("Failed to send Telegram notification:", error);
-        return { success: false, error: error.message || "Network Error" };
+        return { success: false, error: errorMessage };
     }
 }
 
@@ -75,9 +76,10 @@ export async function sendBookingNotificationAction(
     startDate: string,
     endDate: string,
     totalPrice: number,
-    isManual: boolean = false
+    isManual: boolean = false,
+    bookingId?: string
 ) {
-    const type = isManual ? "👨‍💻 <b>АДМИН ЗАХИАЛГА</b>" : "🌐 <b>ОНЛАЙН ЗАХИАЛГА</b>";
+    const type = isManual ? "👨‍💻 <b>АДМИН ЗАХИАЛГА</b>" : "🌐 <b>ШИНЭ ЗАХИАЛГА</b> (#pending)";
 
     // Sanitize phone for tel link
     const cleanPhone = customerPhone.replace(/\D/g, '');
@@ -91,18 +93,68 @@ ${type}
 📅 <b>Огноо:</b> ${startDate} - ${endDate}
 💰 <b>Нийт үнэ:</b> ${totalPrice.toLocaleString()}₮
 
-<i>Системд бүртгэгдлээ.</i>
+${isManual ? '<i>Админаар бүртгэгдлээ.</i>' : '<i>Баталгаажуулахыг хүлээж байна...</i>'}
     `.trim();
 
     const buttons: InlineButton[][] = [];
-    const row: InlineButton[] = [];
 
-    if (cleanPhone && cleanPhone.length > 4) {
-        row.push({ text: "📞 Залгах", url: `tel:+976${cleanPhone}` });
+    // For online bookings (not manual), add approval buttons
+    if (!isManual && bookingId) {
+        buttons.push([
+            { text: "✅ Баталгаажуулах", callback_data: `approve:booking:${bookingId}` },
+            { text: "❌ Татгалзах", callback_data: `reject:booking:${bookingId}` }
+        ]);
+        buttons.push([
+            { text: "📍 Байршил илгээх", callback_data: `send:location:${bookingId}` },
+            { text: "💳 Данс илгээх", callback_data: `send:bank:${bookingId}` }
+        ]);
     }
 
-    row.push({ text: "🔗 Систем рүү орох", url: `${SYSTEM_URL}/admin/bookings` });
-    buttons.push(row);
+    // Contact row
+    const contactRow: InlineButton[] = [];
+    if (cleanPhone && cleanPhone.length > 4) {
+        contactRow.push({ text: "📞 Залгах", url: `tel:+976${cleanPhone}` });
+    }
+    contactRow.push({ text: "🔗 Систем", url: `${SYSTEM_URL}/admin/bookings` });
+    buttons.push(contactRow);
+
+    return await sendTelegramMessageAction(message, buttons);
+}
+
+// Food order notification to admin
+export async function sendFoodOrderNotificationAction(
+    orderId: string,
+    guestName: string,
+    items: { name: string; quantity: number; price: number }[],
+    totalAmount: number,
+    deliveryType: 'house' | 'pickup',
+    houseName?: string,
+    guestPhone?: string
+) {
+    let message = `🍽 <b>ШИНЭ ХООЛНЫ ЗАХИАЛГА</b>\n\n`;
+    message += `📋 <b>Захиалга:</b> #${orderId.slice(-6)}\n`;
+    message += `👤 <b>Зочин:</b> ${guestName}\n`;
+    if (guestPhone) {
+        message += `📞 <b>Утас:</b> ${guestPhone}\n`;
+    }
+    message += `🚚 <b>Хүргэлт:</b> ${deliveryType === 'house' ? `${houseName || 'Байшин'}` : 'Авч явна'}\n\n`;
+    
+    message += `<b>Захиалсан хоол:</b>\n`;
+    items.forEach(item => {
+        message += `  • ${item.name} x${item.quantity} = ${(item.price * item.quantity).toLocaleString()}₮\n`;
+    });
+    
+    message += `\n💰 <b>Нийт:</b> ${totalAmount.toLocaleString()}₮`;
+
+    const buttons: InlineButton[][] = [
+        [
+            { text: "✅ Хүлээн авах", callback_data: `confirm:order:${orderId}` },
+            { text: "❌ Цуцлах", callback_data: `cancel:order:${orderId}` }
+        ],
+        [
+            { text: "🔗 Захиалгууд", url: `${SYSTEM_URL}/admin/restaurant/orders` }
+        ]
+    ];
 
     return await sendTelegramMessageAction(message, buttons);
 }

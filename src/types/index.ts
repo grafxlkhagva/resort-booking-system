@@ -1,5 +1,14 @@
 export type UserRole = 'admin' | 'user';
 
+export interface Language {
+    id: string; // 'mn', 'en', 'ru', 'zh', 'ko'
+    name: string;
+    isActive: boolean;
+    flag?: string;
+}
+
+export type LocalizedText = Record<string, string>;
+
 export interface UserProfile {
     uid: string;
     email: string;
@@ -33,6 +42,10 @@ export interface House {
     houseNumber: number;
     description: string;
     longDescription?: string;
+    // Localized fields
+    localizedNames?: LocalizedText;
+    localizedDescriptions?: LocalizedText;
+    localizedLongDescriptions?: LocalizedText;
     price: number;
     capacity: number;
     imageUrl: string;
@@ -126,6 +139,14 @@ export interface ResortSettings {
         botToken: string;
         chatId: string;
         isActive: boolean;
+        webhookSecret?: string;
+        webhookUrl?: string;
+    };
+    payment?: {
+        bankName: string;
+        accountNumber: string;
+        accountName: string;
+        qrImageUrl?: string;
     };
     channelManager?: {
         isActive: boolean;
@@ -141,6 +162,10 @@ export interface ResortSettings {
         deliveryEnabled: boolean;
         minOrderAmount?: number;
     };
+    languages?: {
+        activeLanguages: string[]; // ['mn', 'en', ...]
+        defaultLanguage: string; // 'mn'
+    };
 }
 
 export interface MenuCategory {
@@ -148,6 +173,7 @@ export interface MenuCategory {
     name: string;
     order: number;
     isActive: boolean;
+    localizedNames?: LocalizedText;
 }
 
 export interface MenuItem {
@@ -158,6 +184,8 @@ export interface MenuItem {
     price: number;
     imageUrl?: string;
     isAvailable: boolean;
+    localizedNames?: LocalizedText;
+    localizedDescriptions?: LocalizedText;
     tags?: string[]; // 'spicy', 'vegetarian', etc.
     createdAt: number;
 }
@@ -198,3 +226,58 @@ export interface Review {
     comment: string;
     createdAt: number;
 }
+
+// Telegram Bot Types
+export interface TelegramUser {
+    id: number;
+    is_bot: boolean;
+    first_name: string;
+    last_name?: string;
+    username?: string;
+    language_code?: string;
+}
+
+export interface TelegramChat {
+    id: number;
+    type: 'private' | 'group' | 'supergroup' | 'channel';
+    title?: string;
+    username?: string;
+    first_name?: string;
+    last_name?: string;
+}
+
+export interface TelegramMessage {
+    message_id: number;
+    from?: TelegramUser;
+    chat: TelegramChat;
+    date: number;
+    text?: string;
+    contact?: {
+        phone_number: string;
+        first_name: string;
+        last_name?: string;
+        user_id?: number;
+    };
+}
+
+export interface TelegramCallbackQuery {
+    id: string;
+    from: TelegramUser;
+    message?: TelegramMessage;
+    chat_instance: string;
+    data?: string;
+}
+
+export interface TelegramUpdate {
+    update_id: number;
+    message?: TelegramMessage;
+    callback_query?: TelegramCallbackQuery;
+}
+
+export interface TelegramInlineButton {
+    text: string;
+    url?: string;
+    callback_data?: string;
+}
+
+export type TelegramInlineKeyboard = TelegramInlineButton[][];

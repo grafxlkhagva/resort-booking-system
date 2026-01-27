@@ -12,12 +12,13 @@ import {
   Users,
   Settings,
   ChevronRight,
-  ListOrdered,
   ChefHat,
   Link2,
+  Globe,
 } from "lucide-react";
 import { collection, getDocs } from "firebase/firestore";
 import { db } from "@/lib/firebase";
+import { useLanguage } from "@/contexts/LanguageContext";
 
 type HouseStatus = "clean" | "dirty" | "cleaning" | "occupied" | "maintenance";
 
@@ -34,6 +35,7 @@ export default function AdminDashboard() {
   const router = useRouter();
   const [stats, setStats] = useState<DashboardStats | null>(null);
   const [loadingStats, setLoadingStats] = useState(true);
+  const { t } = useLanguage();
 
   useEffect(() => {
     if (!loading && (!user || !isAdmin)) {
@@ -92,7 +94,7 @@ export default function AdminDashboard() {
   if (loading || !isAdmin) {
     return (
       <div className="min-h-[50vh] flex items-center justify-center">
-        <div className="spinner" />
+        <div className="w-10 h-10 border-4 border-[var(--primary)] border-t-transparent rounded-full animate-spin" />
       </div>
     );
   }
@@ -104,7 +106,7 @@ export default function AdminDashboard() {
 
       {loadingStats ? (
         <div className="flex justify-center py-16">
-          <div className="spinner" />
+          <div className="w-10 h-10 border-4 border-[var(--primary)] border-t-transparent rounded-full animate-spin" />
         </div>
       ) : (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-5">
@@ -123,15 +125,16 @@ export default function AdminDashboard() {
               <span>Бэлэн: <strong className="text-green-600">{stats?.houses.clean ?? 0}</strong></span>
               <span>Бохир: <strong className="text-red-600">{stats?.houses.dirty ?? 0}</strong></span>
             </div>
-            <p className="text-xs text-[var(--muted-foreground)] mt-3">Жороо засах, байшин нэмэх</p>
+            <p className="text-xs text-[var(--muted-foreground)] mt-3">Төрөл засах, байшин нэмэх</p>
           </Link>
 
           {/* Захиалга удирдлага */}
-          <div className="card p-5 flex flex-col">
+          <Link href="/admin/bookings" className="card p-5 hover:shadow-[var(--shadow-lg)] transition-shadow group block">
             <div className="flex items-start justify-between gap-3">
               <div className="flex items-center justify-center w-11 h-11 rounded-xl bg-amber-100 text-amber-600">
                 <Calendar size={22} />
               </div>
+              <ChevronRight className="w-5 h-5 text-[var(--muted)] group-hover:text-[var(--primary)] flex-shrink-0" />
             </div>
             <h2 className="font-semibold text-[var(--foreground)] mt-3 mb-2">Захиалга удирдлага</h2>
             <div className="flex flex-wrap gap-x-4 gap-y-1 text-sm text-[var(--muted)]">
@@ -139,37 +142,39 @@ export default function AdminDashboard() {
               <span>Хүлээгдэж буй: <strong className="text-amber-600">{stats?.bookings.pending ?? 0}</strong></span>
               <span>Баталгаажсан: <strong className="text-green-600">{stats?.bookings.confirmed ?? 0}</strong></span>
             </div>
-            <div className="mt-4 flex flex-wrap gap-2">
-              <Link href="/admin/bookings" className="btn-primary text-sm py-2 px-4 inline-flex">
-                <ListOrdered size={16} className="mr-1.5" /> Захиалгууд
-              </Link>
-              <Link href="/admin/bookings/new" className="text-sm py-2 px-4 rounded-xl border border-[var(--border)] text-[var(--foreground)] hover:bg-[var(--background)] inline-flex">
-                Шинэ захиалга
-              </Link>
-            </div>
-          </div>
+            <p className="text-xs text-[var(--muted-foreground)] mt-3">Бүх захиалга харах, календарь</p>
+          </Link>
 
-          {/* Ресторан удирдлага */}
-          <div className="card p-5 flex flex-col">
+          {/* Ресторан Меню */}
+          <Link href="/admin/restaurant/menu" className="card p-5 hover:shadow-[var(--shadow-lg)] transition-shadow group block">
+            <div className="flex items-start justify-between gap-3">
+              <div className="flex items-center justify-center w-11 h-11 rounded-xl bg-orange-100 text-orange-600">
+                <ChefHat size={22} />
+              </div>
+              <ChevronRight className="w-5 h-5 text-[var(--muted)] group-hover:text-[var(--primary)] flex-shrink-0" />
+            </div>
+            <h2 className="font-semibold text-[var(--foreground)] mt-3 mb-2">Ресторан Меню</h2>
+            <div className="flex flex-wrap gap-x-4 gap-y-1 text-sm text-[var(--muted)]">
+              <span>Нийт хоол: <strong className="text-[var(--foreground)]">{stats?.menuItems ?? 0}</strong></span>
+            </div>
+            <p className="text-xs text-[var(--muted-foreground)] mt-3">Хоолны цэс, үнэ, зураг засах</p>
+          </Link>
+
+          {/* Ресторан Захиалга */}
+          <Link href="/admin/restaurant/orders" className="card p-5 hover:shadow-[var(--shadow-lg)] transition-shadow group block">
             <div className="flex items-start justify-between gap-3">
               <div className="flex items-center justify-center w-11 h-11 rounded-xl bg-emerald-100 text-emerald-600">
                 <UtensilsCrossed size={22} />
               </div>
+              <ChevronRight className="w-5 h-5 text-[var(--muted)] group-hover:text-[var(--primary)] flex-shrink-0" />
             </div>
-            <h2 className="font-semibold text-[var(--foreground)] mt-3 mb-2">Ресторан удирдлага</h2>
+            <h2 className="font-semibold text-[var(--foreground)] mt-3 mb-2">Ресторан Захиалга</h2>
             <div className="flex flex-wrap gap-x-4 gap-y-1 text-sm text-[var(--muted)]">
-              <span>Меню: <strong className="text-[var(--foreground)]">{stats?.menuItems ?? 0}</strong> ширхэг</span>
-              <span>Идэвхтэй захиалга: <strong className="text-amber-600">{stats?.orders.active ?? 0}</strong></span>
+              <span>Идэвхтэй: <strong className="text-amber-600">{stats?.orders.active ?? 0}</strong></span>
+              <span>Нийт: <strong className="text-[var(--foreground)]">{stats?.orders.total ?? 0}</strong></span>
             </div>
-            <div className="mt-4 flex flex-wrap gap-2">
-              <Link href="/admin/restaurant/menu" className="text-sm py-2 px-4 rounded-xl border border-[var(--border)] text-[var(--foreground)] hover:bg-[var(--background)] inline-flex">
-                <ChefHat size={16} className="mr-1.5" /> Меню
-              </Link>
-              <Link href="/admin/restaurant/orders" className="text-sm py-2 px-4 rounded-xl border border-[var(--border)] text-[var(--foreground)] hover:bg-[var(--background)] inline-flex">
-                <UtensilsCrossed size={16} className="mr-1.5" /> Захиалгууд (Kitchen)
-              </Link>
-            </div>
-          </div>
+            <p className="text-xs text-[var(--muted-foreground)] mt-3">Гал тогооны захиалга удирдах</p>
+          </Link>
 
           {/* Өдрийн үйл ажиллагаа / Housekeeping */}
           <Link href="/admin/operations" className="card p-5 hover:shadow-[var(--shadow-lg)] transition-shadow group block">
@@ -177,7 +182,7 @@ export default function AdminDashboard() {
               <div className="flex items-center justify-center w-11 h-11 rounded-xl bg-slate-100 text-slate-600">
                 <ClipboardList size={22} />
               </div>
-              <ChevronRight className="w-5 h-5 text-[var(--muted)] group-hover:text-[var(--primary)] flex-shrink-0" />
+              <ChevronRight className="w-5 h-5 text-[var(--muted)] group-hover:text(--primary) flex-shrink-0" />
             </div>
             <h2 className="font-semibold text-[var(--foreground)] mt-3 mb-2">Өдрийн үйл ажиллагаа</h2>
             <div className="flex flex-wrap gap-x-4 gap-y-1 text-sm text-[var(--muted)]">
@@ -186,7 +191,7 @@ export default function AdminDashboard() {
               <span>Цэвэрлэж байна: <strong className="text-amber-600">{stats?.houses.cleaning ?? 0}</strong></span>
               <span>Бэлэн: <strong className="text-green-600">{stats?.houses.clean ?? 0}</strong></span>
             </div>
-            <p className="text-xs text-[var(--muted-foreground)] mt-3">Ирэх/гэх, байшны төлөв, өдрийн тайлан</p>
+            <p className="text-xs text-[var(--muted-foreground)] mt-3">Ирэх/гэх, байшны төлөв, тайлан</p>
           </Link>
 
           {/* Channel Manager */}
@@ -211,6 +216,18 @@ export default function AdminDashboard() {
             </div>
             <h2 className="font-semibold text-[var(--foreground)] mt-3 mb-2">Хэрэглэгчид</h2>
             <p className="text-sm text-[var(--muted)]">Нийт: <strong className="text-[var(--foreground)]">{stats?.users ?? 0}</strong></p>
+          </Link>
+
+          {/* Хэлний тохиргоо */}
+          <Link href="/admin/settings/languages" className="card p-5 hover:shadow-[var(--shadow-lg)] transition-shadow group block">
+            <div className="flex items-start justify-between gap-3">
+              <div className="flex items-center justify-center w-11 h-11 rounded-xl bg-blue-100 text-blue-600">
+                <Globe size={22} />
+              </div>
+              <ChevronRight className="w-5 h-5 text-[var(--muted)] group-hover:text-[var(--primary)] flex-shrink-0" />
+            </div>
+            <h2 className="font-semibold text-[var(--foreground)] mt-3 mb-2">Хэлний тохиргоо</h2>
+            <p className="text-sm text-[var(--muted)]">Олон хэлний орчуулга, AI тохиргоо</p>
           </Link>
 
           {/* Тохиргоо */}

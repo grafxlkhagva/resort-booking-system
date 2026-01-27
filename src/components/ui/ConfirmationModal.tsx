@@ -1,5 +1,5 @@
-import React from 'react';
 import { X } from 'lucide-react';
+import { useLanguage } from "@/contexts/LanguageContext";
 
 interface ConfirmationModalProps {
     isOpen: boolean;
@@ -10,6 +10,7 @@ interface ConfirmationModalProps {
 }
 
 export default function ConfirmationModal({ isOpen, onClose, onConfirm, title, message }: ConfirmationModalProps) {
+    const { t } = useLanguage();
     if (!isOpen) return null;
 
     return (
@@ -42,7 +43,7 @@ export default function ConfirmationModal({ isOpen, onClose, onConfirm, title, m
                             type="button"
                             onClick={onClose}
                         >
-                            Болих
+                            {t('cancel', 'Болих')}
                         </button>
                         <button
                             className="bg-red-500 text-white active:bg-red-600 font-bold uppercase text-sm px-6 py-3 rounded shadow hover:shadow-lg outline-none focus:outline-none mr-1 mb-1 ease-linear transition-all duration-150"
@@ -52,7 +53,7 @@ export default function ConfirmationModal({ isOpen, onClose, onConfirm, title, m
                                 onClose();
                             }}
                         >
-                            Устгах
+                            {t('delete', 'Устгах')}
                         </button>
                     </div>
                 </div>

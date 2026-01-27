@@ -6,7 +6,14 @@ import { useAmenities } from "@/hooks/useAmenities";
 import { getDiscountStatus } from "@/lib/utils";
 import { storage } from "@/lib/firebase";
 import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
-import { X, Upload, Image as ImageIcon } from "lucide-react";
+import { X, Upload, Image as ImageIcon, Globe, ChevronDown, ChevronUp } from "lucide-react";
+import { useLanguage } from "@/contexts/LanguageContext";
+import { db } from "@/lib/firebase";
+import { collection, getDocs, query, where } from "firebase/firestore";
+import { Language } from "@/types";
+import { useEffect } from "react";
+import { translateText } from "@/actions/translate";
+import { Bot, Loader2 } from "lucide-react";
 
 interface HouseFormProps {
     initialData?: House | null;
@@ -16,6 +23,19 @@ interface HouseFormProps {
 
 export default function HouseForm({ initialData, onSubmit, onCancel }: HouseFormProps) {
     const { amenities } = useAmenities();
+    const { t } = useLanguage();
+    const [activeLangs, setActiveLangs] = useState<Language[]>([]);
+    const [expandedLang, setExpandedLang] = useState<string | null>(null);
+
+    useEffect(() => {
+        const fetchLangs = async () => {
+            const q = query(collection(db, "languages"), where("isActive", "==", true));
+            const snap = await getDocs(q);
+            const langs = snap.docs.map(doc => doc.data() as Language);
+            setActiveLangs(langs.filter(l => l.id !== 'mn')); // Only show other languages for manual translation
+        };
+        fetchLangs();
+    }, []);
     const [formData, setFormData] = useState({
         name: initialData?.name || "",
         houseNumber: initialData?.houseNumber || 0,
@@ -33,12 +53,16 @@ export default function HouseForm({ initialData, onSubmit, onCancel }: HouseForm
             validDays: [],
             label: "",
             isActive: false
-        }
+        },
+        localizedNames: initialData?.localizedNames || {} as Record<string, string>,
+        localizedDescriptions: initialData?.localizedDescriptions || {} as Record<string, string>,
+        localizedLongDescriptions: initialData?.localizedLongDescriptions || {} as Record<string, string>,
     });
 
     const [featuredFile, setFeaturedFile] = useState<File | null>(null);
     const [galleryFiles, setGalleryFiles] = useState<File[]>([]);
     const [loading, setLoading] = useState(false);
+    const [translatingLang, setTranslatingLang] = useState<string | null>(null);
     const [uploadProgress, setUploadProgress] = useState("");
 
     // Preview for featured image
@@ -60,6 +84,43 @@ export default function HouseForm({ initialData, onSubmit, onCancel }: HouseForm
         setGalleryFiles(prev => prev.filter((_, i) => i !== index));
     };
 
+    const handleAutoTranslate = async (langId: string) => {
+        if (!formData.name && !formData.description && !formData.longDescription) {
+            alert("Эхлээд Монгол хэл дээрх мэдээллээ оруулна уу.");
+            return;
+        }
+
+        setTranslatingLang(langId);
+        try {
+            const [nameTrans, descTrans, longDescTrans] = await Promise.all([
+                formData.name ? translateText(formData.name, langId) : Promise.resolve(null),
+                formData.description ? translateText(formData.description, langId) : Promise.resolve(null),
+                formData.longDescription ? translateText(formData.longDescription, langId) : Promise.resolve(null)
+            ]);
+
+            setFormData(prev => ({
+                ...prev,
+                localizedNames: {
+                    ...prev.localizedNames,
+                    ...(nameTrans ? { [langId]: nameTrans } : {})
+                },
+                localizedDescriptions: {
+                    ...prev.localizedDescriptions,
+                    ...(descTrans ? { [langId]: descTrans } : {})
+                },
+                localizedLongDescriptions: {
+                    ...prev.localizedLongDescriptions,
+                    ...(longDescTrans ? { [langId]: longDescTrans } : {})
+                },
+            }));
+        } catch (error: any) {
+            console.error("Translation error:", error);
+            alert(error.message || "Орчуулахад алдаа гарлаа.");
+        } finally {
+            setTranslatingLang(null);
+        }
+    };
+
     const removeExistingGalleryImage = (urlToRemove: string) => {
         setFormData(prev => ({
             ...prev,
@@ -76,7 +137,7 @@ export default function HouseForm({ initialData, onSubmit, onCancel }: HouseForm
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         setLoading(true);
-        setUploadProgress("Зургуудыг хуулж байна...");
+        setUploadProgress(t('admin_uploading_images', "Зургуудыг хуулж байна..."));
 
         try {
             let featuredImageUrl = formData.imageUrl;
@@ -99,7 +160,7 @@ export default function HouseForm({ initialData, onSubmit, onCancel }: HouseForm
                 amenities: formData.amenities,
             };
 
-            setUploadProgress("Мэдээллийг хадгалж байна...");
+            setUploadProgress(t('admin_saving', "Мэдээллийг хадгалж байна..."));
             await onSubmit(finalData);
         } catch (error) {
             console.error("Error submitting form:", error);
@@ -113,12 +174,12 @@ export default function HouseForm({ initialData, onSubmit, onCancel }: HouseForm
     return (
         <form onSubmit={handleSubmit} className="space-y-6 bg-white p-6 rounded-lg shadow">
             <h3 className="text-lg font-medium text-gray-900">
-                {initialData ? "Байшин засах" : "Шинэ байшин нэмэх"}
+                {initialData ? t('admin_edit_house', "Байшин засах") : t('admin_add_house', "Шинэ байшин нэмэх")}
             </h3>
 
             <div className="grid grid-cols-1 gap-6 sm:grid-cols-2">
                 <div className="col-span-1">
-                    <label className="block text-sm font-medium text-gray-700">Нэр</label>
+                    <label className="block text-sm font-medium text-gray-700">{t('admin_house_name', 'Нэр')}</label>
                     <input
                         type="text"
                         required
@@ -129,7 +190,7 @@ export default function HouseForm({ initialData, onSubmit, onCancel }: HouseForm
                 </div>
 
                 <div className="col-span-1">
-                    <label className="block text-sm font-medium text-gray-700">Байшингийн Дугаар</label>
+                    <label className="block text-sm font-medium text-gray-700">{t('admin_house_number', 'Байшингийн Дугаар')}</label>
                     <input
                         type="number"
                         required
@@ -141,7 +202,7 @@ export default function HouseForm({ initialData, onSubmit, onCancel }: HouseForm
                 </div>
 
                 <div className="col-span-2">
-                    <label className="block text-sm font-medium text-gray-700">Тайлбар</label>
+                    <label className="block text-sm font-medium text-gray-700">{t('admin_description', 'Тайлбар')}</label>
                     <textarea
                         required
                         rows={3}
@@ -152,7 +213,7 @@ export default function HouseForm({ initialData, onSubmit, onCancel }: HouseForm
                 </div>
 
                 <div className="col-span-2">
-                    <label className="block text-sm font-medium text-gray-700">Дэлгэрэнгүй Тайлбар</label>
+                    <label className="block text-sm font-medium text-gray-700">{t('admin_long_description', 'Дэлгэрэнгүй Тайлбар')}</label>
                     <textarea
                         rows={5}
                         className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm border p-2"
@@ -162,7 +223,7 @@ export default function HouseForm({ initialData, onSubmit, onCancel }: HouseForm
                 </div>
 
                 <div>
-                    <label className="block text-sm font-medium text-gray-700">Үнэ (хоногоор)</label>
+                    <label className="block text-sm font-medium text-gray-700">{t('admin_price', 'Үнэ (хоногоор)')}</label>
                     <input
                         type="number"
                         required
@@ -174,7 +235,7 @@ export default function HouseForm({ initialData, onSubmit, onCancel }: HouseForm
                 </div>
 
                 <div>
-                    <label className="block text-sm font-medium text-gray-700">Багтаамж (хүн)</label>
+                    <label className="block text-sm font-medium text-gray-700">{t('admin_capacity', 'Багтаамж (хүн)')}</label>
                     <input
                         type="number"
                         required
@@ -185,11 +246,10 @@ export default function HouseForm({ initialData, onSubmit, onCancel }: HouseForm
                     />
                 </div>
 
-                {/* Discount / Promo Section */}
                 <div className="col-span-2 bg-indigo-50 p-4 rounded-lg border border-indigo-100">
                     <div className="flex justify-between items-center mb-4">
                         <div className="flex items-center space-x-2">
-                            <h4 className="text-md font-medium text-indigo-900">Хямдрал / Урамшуулал (Discount)</h4>
+                            <h4 className="text-md font-medium text-indigo-900">{t('admin_discount_pricing', 'Хямдрал / Урамшуулал (Discount)')}</h4>
                             {(() => {
                                 const status = getDiscountStatus(formData.discount);
                                 let colorClass = "bg-gray-100 text-gray-800";
@@ -220,14 +280,14 @@ export default function HouseForm({ initialData, onSubmit, onCancel }: HouseForm
                                 })}
                             />
                             <label htmlFor="discountActive" className="ml-2 block text-sm text-gray-900 font-medium">
-                                Идэвхжүүлэх
+                                {t('admin_discount_active', 'Идэвхжүүлэх')}
                             </label>
                         </div>
                     </div>
 
                     <div className={`grid grid-cols-1 md:grid-cols-2 gap-4 ${!formData.discount?.isActive ? 'opacity-50 pointer-events-none' : ''}`}>
                         <div>
-                            <label className="block text-sm font-medium text-gray-700">Хямдарсан Үнэ</label>
+                            <label className="block text-sm font-medium text-gray-700">{t('admin_discount_price', 'Хямдарсан Үнэ')}</label>
                             <input
                                 type="number"
                                 min="0"
@@ -242,7 +302,7 @@ export default function HouseForm({ initialData, onSubmit, onCancel }: HouseForm
                             <p className="text-xs text-gray-500 mt-1">Үндсэн үнээс бага байх ёстой.</p>
                         </div>
                         <div>
-                            <label className="block text-sm font-medium text-gray-700">Тайлбар (Label)</label>
+                            <label className="block text-sm font-medium text-gray-700">{t('admin_discount_label', 'Тайлбар (Label)')}</label>
                             <input
                                 type="text"
                                 className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm border p-2"
@@ -255,7 +315,7 @@ export default function HouseForm({ initialData, onSubmit, onCancel }: HouseForm
                             />
                         </div>
                         <div>
-                            <label className="block text-sm font-medium text-gray-700">Эхлэх Огноо</label>
+                            <label className="block text-sm font-medium text-gray-700">{t('admin_start_date', 'Эхлэх Огноо')}</label>
                             <input
                                 type="date"
                                 className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm border p-2"
@@ -277,7 +337,7 @@ export default function HouseForm({ initialData, onSubmit, onCancel }: HouseForm
                             />
                         </div>
                         <div>
-                            <label className="block text-sm font-medium text-gray-700">Дуусах Огноо</label>
+                            <label className="block text-sm font-medium text-gray-700">{t('admin_end_date', 'Дуусах Огноо')}</label>
                             <input
                                 type="date"
                                 className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm border p-2"
@@ -299,7 +359,7 @@ export default function HouseForm({ initialData, onSubmit, onCancel }: HouseForm
                             />
                         </div>
                         <div className="col-span-1 md:col-span-2">
-                            <label className="block text-sm font-medium text-gray-700 mb-2">Хямдралтай өдрүүд</label>
+                            <label className="block text-sm font-medium text-gray-700 mb-2">{t('admin_valid_days', 'Хямдралтай өдрүүд')}</label>
                             <div className="flex flex-wrap gap-2">
                                 {['Ням', 'Дав', 'Мяг', 'Лха', 'Пүр', 'Баа', 'Бям'].map((dayName, index) => {
                                     const isSelected = formData.discount?.validDays?.includes(index);
@@ -339,7 +399,7 @@ export default function HouseForm({ initialData, onSubmit, onCancel }: HouseForm
 
                 {/* Featured Image Upload */}
                 <div className="col-span-2">
-                    <label className="block text-sm font-medium text-gray-700 mb-2">Үндсэн Зураг</label>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">{t('admin_featured_image', 'Үндсэн Зураг')}</label>
                     <div className="flex items-center space-x-4">
                         <div className="relative w-32 h-32 border-2 border-dashed border-gray-300 rounded-lg flex items-center justify-center overflow-hidden bg-gray-50">
                             {featuredPreview ? (
@@ -362,7 +422,7 @@ export default function HouseForm({ initialData, onSubmit, onCancel }: HouseForm
 
                 {/* Gallery Images Upload */}
                 <div className="col-span-2">
-                    <label className="block text-sm font-medium text-gray-700 mb-2">Зургийн Цомог</label>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">{t('admin_gallery_images', 'Зургийн Цомог')}</label>
                     <input
                         type="file"
                         accept="image/*"
@@ -434,7 +494,7 @@ export default function HouseForm({ initialData, onSubmit, onCancel }: HouseForm
                 </div>
 
                 <div className="col-span-2">
-                    <label className="block text-sm font-medium text-gray-700 mb-2">Тавилга / Тоног төхөөрөмж</label>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">{t('admin_amenities', 'Тавилга / Тоног төхөөрөмж')}</label>
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                         {amenities.map((amenity) => {
                             // Find existing assignment
@@ -511,6 +571,95 @@ export default function HouseForm({ initialData, onSubmit, onCancel }: HouseForm
                         })}
                     </div>
                 </div>
+
+                {activeLangs.length > 0 && (
+                    <div className="col-span-2 border-t pt-6">
+                        <div className="flex items-center mb-4">
+                            <Globe className="mr-2 text-indigo-500" size={20} />
+                            <h4 className="text-md font-medium text-gray-900">{t('admin_manual_translation', 'Гар аргаар орчуулах')}</h4>
+                        </div>
+
+                        <div className="space-y-4">
+                            {activeLangs.map((lang) => (
+                                <div key={lang.id} className="border rounded-xl overflow-hidden bg-gray-50 transition-all">
+                                    <div
+                                        onClick={() => setExpandedLang(expandedLang === lang.id ? null : lang.id)}
+                                        className="w-full flex items-center justify-between p-4 hover:bg-gray-100 transition-colors cursor-pointer"
+                                    >
+                                        <div className="flex items-center gap-2">
+                                            <span className="text-2xl">{lang.flag}</span>
+                                            <span className="font-medium">{lang.name}</span>
+                                            <span className="text-xs text-gray-400 uppercase font-semibold">{lang.id}</span>
+                                        </div>
+                                        <div className="flex items-center gap-3">
+                                            <button
+                                                type="button"
+                                                onClick={(e) => {
+                                                    e.stopPropagation();
+                                                    handleAutoTranslate(lang.id);
+                                                }}
+                                                disabled={!!translatingLang}
+                                                className="flex items-center gap-1 px-3 py-1 bg-purple-100 text-purple-700 rounded-full text-xs font-bold hover:bg-purple-200 transition-colors disabled:opacity-50"
+                                            >
+                                                {translatingLang === lang.id ? (
+                                                    <Loader2 size={12} className="animate-spin" />
+                                                ) : (
+                                                    <Bot size={12} />
+                                                )}
+                                                AI Орчуулга
+                                            </button>
+                                            {expandedLang === lang.id ? <ChevronUp size={20} /> : <ChevronDown size={20} />}
+                                        </div>
+                                    </div>
+
+                                    {expandedLang === lang.id && (
+                                        <div className="p-4 pt-0 space-y-4 animate-in fade-in slide-in-from-top-2 duration-200">
+                                            <div>
+                                                <label className="block text-sm font-medium text-gray-700 mb-1">{t('admin_house_name', 'Нэр')}</label>
+                                                <input
+                                                    type="text"
+                                                    className="w-full rounded-lg border-gray-200 border p-2.5 focus:ring-2 focus:ring-indigo-500 outline-none transition-all"
+                                                    value={formData.localizedNames[lang.id] || ""}
+                                                    placeholder={formData.name}
+                                                    onChange={(e) => setFormData({
+                                                        ...formData,
+                                                        localizedNames: { ...formData.localizedNames, [lang.id]: e.target.value }
+                                                    })}
+                                                />
+                                            </div>
+                                            <div>
+                                                <label className="block text-sm font-medium text-gray-700 mb-1">{t('admin_description', 'Тайлбар')}</label>
+                                                <textarea
+                                                    rows={2}
+                                                    className="w-full rounded-lg border-gray-200 border p-2.5 focus:ring-2 focus:ring-indigo-500 outline-none transition-all"
+                                                    value={formData.localizedDescriptions[lang.id] || ""}
+                                                    placeholder={formData.description}
+                                                    onChange={(e) => setFormData({
+                                                        ...formData,
+                                                        localizedDescriptions: { ...formData.localizedDescriptions, [lang.id]: e.target.value }
+                                                    })}
+                                                />
+                                            </div>
+                                            <div>
+                                                <label className="block text-sm font-medium text-gray-700 mb-1">{t('admin_long_description', 'Дэлгэрэнгүй тайлбар')}</label>
+                                                <textarea
+                                                    rows={4}
+                                                    className="w-full rounded-lg border-gray-200 border p-2.5 focus:ring-2 focus:ring-indigo-500 outline-none transition-all"
+                                                    value={formData.localizedLongDescriptions[lang.id] || ""}
+                                                    placeholder={formData.longDescription}
+                                                    onChange={(e) => setFormData({
+                                                        ...formData,
+                                                        localizedLongDescriptions: { ...formData.localizedLongDescriptions, [lang.id]: e.target.value }
+                                                    })}
+                                                />
+                                            </div>
+                                        </div>
+                                    )}
+                                </div>
+                            ))}
+                        </div>
+                    </div>
+                )}
             </div>
 
             <div className="flex justify-end space-x-3">
@@ -519,7 +668,7 @@ export default function HouseForm({ initialData, onSubmit, onCancel }: HouseForm
                     onClick={onCancel}
                     className="px-4 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
                 >
-                    Болих
+                    {t('cancel', 'Болих')}
                 </button>
                 <button
                     type="submit"
@@ -529,13 +678,13 @@ export default function HouseForm({ initialData, onSubmit, onCancel }: HouseForm
                     {loading ? (
                         <>
                             <Upload className="animate-spin -ml-1 mr-2 h-4 w-4" />
-                            {uploadProgress || "Хадгалж байна..."}
+                            {uploadProgress || t('admin_saving', "Хадгалж байна...")}
                         </>
                     ) : (
-                        "Хадгалах"
+                        t('save', "Хадгалах")
                     )}
                 </button>
             </div>
-        </form>
+        </form >
     );
 }

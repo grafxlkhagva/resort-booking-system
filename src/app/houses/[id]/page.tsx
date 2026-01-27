@@ -9,6 +9,7 @@ import BookingModal from "@/components/user/BookingModal";
 import ReviewList from "@/components/reviews/ReviewList";
 import ReviewForm from "@/components/reviews/ReviewForm";
 import { useAmenities } from "@/hooks/useAmenities";
+import { useLanguage } from "@/contexts/LanguageContext";
 import { Users, Wifi, Wind, MapPin, Star, Share2, Heart, Check, User } from "lucide-react";
 import { isDiscountActive, formatValidDays, getDiscountStatus } from "@/lib/utils";
 import { ResortSettings } from "@/types"; // Import ResortSettings
@@ -20,6 +21,7 @@ export default function HouseDetail() {
     const [showModal, setShowModal] = useState(false);
     const [refreshReviews, setRefreshReviews] = useState(0);
     const { amenities, loading: amenitiesLoading } = useAmenities();
+    const { currentLanguage, t } = useLanguage();
 
     // Review stats
     const [reviews, setReviews] = useState<any[]>([]);
@@ -81,6 +83,8 @@ export default function HouseDetail() {
                         amenities: data.amenities || [],
                         createdAt: data.createdAt?.seconds ? data.createdAt.seconds * 1000 : Date.now(),
                         discount: data.discount || undefined,
+                        localizedNames: data.localizedNames || {},
+                        localizedDescriptions: data.localizedDescriptions || {},
                     } as House);
                 } else {
                     console.log("No such document!");
@@ -133,8 +137,8 @@ export default function HouseDetail() {
 
     if (!house) return (
         <div className="content-padding text-center py-16">
-            <p className="text-[var(--muted)]">Байшин олдсонгүй.</p>
-            <a href="/" className="mt-4 inline-block text-[var(--primary)] font-medium hover:underline">Нүүр рүү буцах</a>
+            <p className="text-[var(--muted)]">{t('house_not_found', 'Байшин олдсонгүй.')}</p>
+            <a href="/" className="mt-4 inline-block text-[var(--primary)] font-medium hover:underline">{t('back_to_home', 'Нүүр рүү буцах')}</a>
         </div>
     );
 
@@ -150,25 +154,25 @@ export default function HouseDetail() {
             {/* Header */}
             <div className="mb-4 sm:mb-6">
                 <h1 className="text-xl sm:text-2xl lg:text-3xl font-bold text-[var(--foreground)] mb-2">
-                    <span className="text-[var(--primary)]">#{house.houseNumber}</span> {house.name}
+                    <span className="text-[var(--primary)]">#{house.houseNumber}</span> {house.localizedNames?.[currentLanguage] || house.name}
                 </h1>
                 <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-sm text-[var(--muted)]">
                     <span className="flex items-center">
                         <Star className="w-4 h-4 text-amber-400 mr-1" fill="currentColor" />
-                        <span className="font-medium text-[var(--foreground)]">{averageRating > 0 ? averageRating.toFixed(1) : "Шинэ"}</span>
+                        <span className="font-medium text-[var(--foreground)]">{averageRating > 0 ? averageRating.toFixed(1) : t('new', 'Шинэ')}</span>
                         <span className="mx-1">·</span>
-                        <span>{reviews.length > 0 ? `${reviews.length} сэтгэгдэл` : "Сэтгэгдэлгүй"}</span>
+                        <span>{reviews.length > 0 ? `${reviews.length} ${t('house_reviews', 'сэтгэгдэл')}` : t('no_reviews', 'Сэтгэгдэлгүй')}</span>
                     </span>
                     <span className="flex items-center">
                         <MapPin className="w-4 h-4 mr-1" />
-                        Тэрэлж, Улаанбаатар
+                        {t('house_location_info', 'Тэрэлж, Улаанбаатар')}
                     </span>
                     <span className="flex items-center gap-2 sm:ml-auto">
                         <button className="flex items-center hover:text-[var(--primary)] transition-colors touch-target">
-                            <Share2 className="w-4 h-4 mr-1" /> Хуваалцах
+                            <Share2 className="w-4 h-4 mr-1" /> {t('share', 'Хуваалцах')}
                         </button>
                         <button className="flex items-center hover:text-[var(--primary)] transition-colors touch-target">
-                            <Heart className="w-4 h-4 mr-1" /> Хадгалах
+                            <Heart className="w-4 h-4 mr-1" /> {t('heart', 'Хадгалах')}
                         </button>
                     </span>
                 </div>
@@ -203,9 +207,12 @@ export default function HouseDetail() {
                     {/* Host & Capacity */}
                     <div className="flex items-center justify-between gap-4 border-b border-[var(--border)] pb-6">
                         <div className="min-w-0">
-                            <h2 className="font-semibold text-[var(--foreground)] mb-0.5">Зохион байгуулагч: Resort Team</h2>
+                            <h2 className="font-semibold text-[var(--foreground)] mb-0.5">{t('house_host', 'Зохион байгуулагч')}: Resort Team</h2>
                             <p className="text-sm text-[var(--muted)]">
-                                {house.capacity} зочин · {house.capacity > 4 ? "2 унтлагын өрөө" : "1 унтлагын өрөө"} · 1 ариун цэврийн өрөө
+                                {t('house_capacity_info', '{capacity} зочин · {rooms} унтлагын өрөө · 1 ариун цэврийн өрөө', {
+                                    capacity: house.capacity,
+                                    rooms: house.capacity > 4 ? 2 : 1
+                                })}
                             </p>
                         </div>
                         <div className="h-11 w-11 rounded-full bg-[var(--primary)]/10 flex items-center justify-center text-[var(--primary)] flex-shrink-0">
@@ -215,13 +222,13 @@ export default function HouseDetail() {
 
                     {/* Description */}
                     <div>
-                        <h3 className="font-semibold text-[var(--foreground)] mb-3">Байшингийн тухай</h3>
-                        <p className="text-[var(--muted)] leading-relaxed">{house.longDescription || house.description}</p>
+                        <h3 className="font-semibold text-[var(--foreground)] mb-3">{t('house_about', 'Байшингийн тухай')}</h3>
+                        <p className="text-[var(--muted)] leading-relaxed">{house.localizedDescriptions?.[currentLanguage] || house.longDescription || house.description}</p>
                     </div>
 
                     {/* Amenities */}
                     <div className="border-t border-[var(--border)] pt-6">
-                        <h3 className="font-semibold text-[var(--foreground)] mb-4">Тав тух, нэмэлтүүд</h3>
+                        <h3 className="font-semibold text-[var(--foreground)] mb-4">{t('house_amenities', 'Тав тух, нэмэлтүүд')}</h3>
                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                             {house.amenities.map((item: any) => {
                                 const amenityId = typeof item === 'string' ? item : item.amenityId;
@@ -248,7 +255,7 @@ export default function HouseDetail() {
 
                     {/* Reviews */}
                     <div className="border-t border-[var(--border)] pt-6">
-                        <h3 className="font-semibold text-[var(--foreground)] mb-4">Сэтгэгдэл</h3>
+                        <h3 className="font-semibold text-[var(--foreground)] mb-4">{t('house_reviews', 'Сэтгэгдэл')}</h3>
                         <ReviewList houseId={house.id} refreshTrigger={refreshReviews} />
                         <div className="mt-6">
                             <ReviewForm houseId={house.id} onReviewSubmitted={() => setRefreshReviews(prev => prev + 1)} />
@@ -265,11 +272,11 @@ export default function HouseDetail() {
                                     <div className="flex items-baseline gap-2 flex-wrap">
                                         <span className="text-2xl font-bold text-red-600">${house.discount!.price}</span>
                                         <span className="text-[var(--muted)] line-through">${house.price}</span>
-                                        <span className="text-[var(--muted)] text-sm">/хоног</span>
+                                        <span className="text-[var(--muted)] text-sm">/{t('day', 'хоног')}</span>
                                     </div>
                                     <div className="mt-2 flex flex-wrap gap-1.5">
                                         <span className="px-2.5 py-0.5 rounded-lg text-xs font-medium bg-red-100 text-red-800">
-                                            {house.discount?.label || "ХЯМДРАЛ"}
+                                            {house.discount?.label || t('discount', 'ХЯМДРАЛ')}
                                         </span>
                                         {house.discount?.validDays && house.discount.validDays.length > 0 && (
                                             <span className="px-2.5 py-0.5 rounded-lg text-xs font-medium bg-[var(--background)] text-[var(--muted)]">
@@ -281,7 +288,7 @@ export default function HouseDetail() {
                             ) : (
                                 <div className="flex items-baseline">
                                     <span className="text-2xl font-bold text-[var(--foreground)]">${house.price}</span>
-                                    <span className="text-[var(--muted)] ml-1 text-sm">/хоног</span>
+                                    <span className="text-[var(--muted)] ml-1 text-sm">/{t('day', 'хоног')}</span>
                                 </div>
                             )}
                         </div>
@@ -289,26 +296,26 @@ export default function HouseDetail() {
                         <div className="border border-[var(--border)] rounded-xl overflow-hidden mb-4">
                             <div className="flex border-b border-[var(--border)]">
                                 <div className="w-1/2 p-3 border-r border-[var(--border)]">
-                                    <span className="text-xs font-medium text-[var(--muted)] uppercase">Ирэх</span>
-                                    <p className="text-sm text-[var(--muted-foreground)] mt-0.5">Огноо сонгох</p>
+                                    <span className="text-xs font-medium text-[var(--muted)] uppercase">{t('house_check_in', 'Ирэх')}</span>
+                                    <p className="text-sm text-[var(--muted-foreground)] mt-0.5">{t('select_date', 'Огноо сонгох')}</p>
                                 </div>
                                 <div className="w-1/2 p-3">
-                                    <span className="text-xs font-medium text-[var(--muted)] uppercase">Буцах</span>
-                                    <p className="text-sm text-[var(--muted-foreground)] mt-0.5">Огноо сонгох</p>
+                                    <span className="text-xs font-medium text-[var(--muted)] uppercase">{t('house_check_out', 'Буцах')}</span>
+                                    <p className="text-sm text-[var(--muted-foreground)] mt-0.5">{t('select_date', 'Огноо сонгох')}</p>
                                 </div>
                             </div>
                             <div className="p-3">
-                                <span className="text-xs font-medium text-[var(--muted)] uppercase">Зочид</span>
-                                <p className="text-sm font-medium text-[var(--foreground)] mt-0.5">{house.capacity} зочин</p>
+                                <span className="text-xs font-medium text-[var(--muted)] uppercase">{t('house_guests', 'Зочид')}</span>
+                                <p className="text-sm font-medium text-[var(--foreground)] mt-0.5">{house.capacity} {t('people', 'зочин')}</p>
                             </div>
                         </div>
 
                         {bookingBlocked ? (
                             <div className="bg-red-50 dark:bg-red-950/30 border border-red-200 dark:border-red-800 rounded-xl p-4 text-center">
-                                <p className="font-medium text-red-800 dark:text-red-200 mb-1">Захиалга түр хаагдсан</p>
-                                <p className="text-sm text-red-600 dark:text-red-300">{blockMessage || "Одоогоор захиалга авах боломжгүй."}</p>
+                                <p className="font-medium text-red-800 dark:text-red-200 mb-1">{t('house_booking_blocked', 'Захиалга түр хаагдсан')}</p>
+                                <p className="text-sm text-red-600 dark:text-red-300">{blockMessage || t('booking_not_available_info', 'Одоогоор захиалга авах боломжгүй.')}</p>
                                 <button disabled className="w-full mt-3 min-h-[var(--touch)] rounded-xl bg-[var(--border)] text-[var(--muted)] font-medium cursor-not-allowed">
-                                    Захиалах боломжгүй
+                                    {t('house_booking_not_available', 'Захиалах боломжгүй')}
                                 </button>
                             </div>
                         ) : (
@@ -316,12 +323,12 @@ export default function HouseDetail() {
                                 onClick={() => setShowModal(true)}
                                 className="btn-primary w-full flex items-center justify-center text-base"
                             >
-                                Захиалах
+                                {t('book_now', 'Захиалах')}
                             </button>
                         )}
 
-                        <p className="text-xs text-center text-[var(--muted)] mt-4">Төлбөрийг баталгаажуулсны дараа төлнө</p>
-                        <p className="mt-4 text-sm text-[var(--muted)]">Захиалгын цонхонд огноо, хоногийн тоо, нийт дүн тооцогдоно.</p>
+                        <p className="text-xs text-center text-[var(--muted)] mt-4">{t('house_payment_info', 'Төлбөрийг баталгаажуулсны дараа төлнө')}</p>
+                        <p className="mt-4 text-sm text-[var(--muted)]">{t('booking_modal_info', 'Захиалгын цонхонд огноо, хоногийн тоо, нийт дүн тооцогдоно.')}</p>
                     </div>
                 </div>
             </div>

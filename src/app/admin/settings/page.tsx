@@ -7,7 +7,7 @@ import { db, storage } from "@/lib/firebase";
 import { doc, getDoc, setDoc } from "firebase/firestore";
 import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
 import { ResortSettings } from "@/types";
-import { Save, MapPin, Phone, Mail, Map as MapIcon, Image as ImageIcon, Palette, Calendar, CheckCircle, Send, MessageSquare, Info, ChevronDown, ChevronUp } from "lucide-react";
+import { Save, MapPin, Phone, Mail, Map as MapIcon, Image as ImageIcon, Palette, Calendar, CheckCircle, Send, MessageSquare, Info, ChevronDown, ChevronUp, CreditCard, Link2, Loader2 } from "lucide-react";
 
 import AdminPhoneVerificationModal from "@/components/admin/AdminPhoneVerificationModal";
 
@@ -21,6 +21,9 @@ export default function SettingsPage() {
 
     const [coverImageFile, setCoverImageFile] = useState<File | null>(null);
     const [logoFile, setLogoFile] = useState<File | null>(null);
+    const [qrImageFile, setQrImageFile] = useState<File | null>(null);
+    const [settingUpWebhook, setSettingUpWebhook] = useState(false);
+    const [webhookStatus, setWebhookStatus] = useState<'none' | 'success' | 'error'>('none');
 
     const [settings, setSettings] = useState<ResortSettings>({
         map: {
@@ -48,7 +51,15 @@ export default function SettingsPage() {
         telegram: {
             botToken: "",
             chatId: "",
-            isActive: false
+            isActive: false,
+            webhookSecret: "",
+            webhookUrl: ""
+        },
+        payment: {
+            bankName: "",
+            accountNumber: "",
+            accountName: "",
+            qrImageUrl: ""
         }
     });
 
@@ -83,7 +94,15 @@ export default function SettingsPage() {
                         telegram: {
                             botToken: data.telegram?.botToken || prev.telegram?.botToken || "",
                             chatId: data.telegram?.chatId || prev.telegram?.chatId || "",
-                            isActive: data.telegram?.isActive ?? prev.telegram?.isActive ?? false
+                            isActive: data.telegram?.isActive ?? prev.telegram?.isActive ?? false,
+                            webhookSecret: data.telegram?.webhookSecret || prev.telegram?.webhookSecret || "",
+                            webhookUrl: data.telegram?.webhookUrl || prev.telegram?.webhookUrl || ""
+                        },
+                        payment: {
+                            bankName: data.payment?.bankName || prev.payment?.bankName || "",
+                            accountNumber: data.payment?.accountNumber || prev.payment?.accountNumber || "",
+                            accountName: data.payment?.accountName || prev.payment?.accountName || "",
+                            qrImageUrl: data.payment?.qrImageUrl || prev.payment?.qrImageUrl || ""
                         }
                     }));
                 }
@@ -125,6 +144,7 @@ export default function SettingsPage() {
         try {
             let coverImageUrl = settings.cover.imageUrl;
             let logoUrl = settings.branding?.logoUrl || "";
+            let qrImageUrl = settings.payment?.qrImageUrl || "";
 
             if (coverImageFile) {
                 const storageRef = ref(storage, `settings/cover_${Date.now()}_${coverImageFile.name}`);
@@ -138,7 +158,14 @@ export default function SettingsPage() {
                 logoUrl = await getDownloadURL(storageRef);
             }
 
+            if (qrImageFile) {
+                const storageRef = ref(storage, `settings/qr_${Date.now()}_${qrImageFile.name}`);
+                await uploadBytes(storageRef, qrImageFile);
+                qrImageUrl = await getDownloadURL(storageRef);
+            }
+
             const currentBranding = settings.branding || defaultBranding;
+            const defaultPayment = { bankName: "", accountNumber: "", accountName: "", qrImageUrl: "" };
 
             const updatedSettings: ResortSettings = {
                 ...settings,
@@ -149,6 +176,10 @@ export default function SettingsPage() {
                 branding: {
                     ...currentBranding,
                     logoUrl: logoUrl
+                },
+                payment: {
+                    ...(settings.payment || defaultPayment),
+                    qrImageUrl: qrImageUrl
                 }
             };
 
@@ -156,6 +187,7 @@ export default function SettingsPage() {
             setSettings(updatedSettings);
             setCoverImageFile(null);
             setLogoFile(null);
+            setQrImageFile(null);
             alert("Тохиргоо амжилттай хадгалагдлаа!");
             router.push("/admin");
         } catch (error) {
@@ -163,6 +195,84 @@ export default function SettingsPage() {
             alert("Тохиргоо хадгалахад алдаа гарлаа.");
         } finally {
             setSaving(false);
+        }
+    };
+
+    const handleQrImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        if (e.target.files && e.target.files[0]) {
+            setQrImageFile(e.target.files[0]);
+        }
+    };
+
+    const setupWebhook = async () => {
+        if (!settings.telegram?.botToken) {
+            alert("Bot Token оруулна уу");
+            return;
+        }
+
+        setSettingUpWebhook(true);
+        setWebhookStatus('none');
+
+        try {
+            // Generate a random secret if not exists
+            const secret = settings.telegram.webhookSecret || Math.random().toString(36).substring(2, 15);
+            const webhookUrl = `${window.location.origin}/api/telegram/webhook`;
+
+            const response = await fetch(`https://api.telegram.org/bot${settings.telegram.botToken}/setWebhook`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    url: webhookUrl,
+                    secret_token: secret
+                })
+            });
+
+            const data = await response.json();
+
+            if (data.ok) {
+                setSettings({
+                    ...settings,
+                    telegram: {
+                        ...settings.telegram,
+                        webhookSecret: secret,
+                        webhookUrl: webhookUrl
+                    }
+                });
+                setWebhookStatus('success');
+            } else {
+                console.error("Webhook setup failed:", data);
+                setWebhookStatus('error');
+            }
+        } catch (error) {
+            console.error("Error setting up webhook:", error);
+            setWebhookStatus('error');
+        } finally {
+            setSettingUpWebhook(false);
+        }
+    };
+
+    const removeWebhook = async () => {
+        if (!settings.telegram?.botToken) return;
+
+        setSettingUpWebhook(true);
+        try {
+            await fetch(`https://api.telegram.org/bot${settings.telegram.botToken}/deleteWebhook`, {
+                method: 'POST'
+            });
+
+            setSettings({
+                ...settings,
+                telegram: {
+                    ...settings.telegram,
+                    webhookSecret: "",
+                    webhookUrl: ""
+                }
+            });
+            setWebhookStatus('none');
+        } catch (error) {
+            console.error("Error removing webhook:", error);
+        } finally {
+            setSettingUpWebhook(false);
         }
     };
 
@@ -606,6 +716,69 @@ export default function SettingsPage() {
                             </div>
                         </div>
 
+                        {/* Webhook Setup */}
+                        <div className="border-t border-gray-200 pt-4 mt-4">
+                            <div className="flex items-center justify-between mb-3">
+                                <div>
+                                    <h3 className="text-sm font-medium text-gray-900 flex items-center">
+                                        <Link2 size={16} className="mr-2" />
+                                        Webhook Тохиргоо (Интерактив бот)
+                                    </h3>
+                                    <p className="text-xs text-gray-500 mt-1">
+                                        Webhook идэвхжүүлснээр Telegram-аас товч дарах, команд бичих боломжтой болно.
+                                    </p>
+                                </div>
+                            </div>
+
+                            {settings.telegram?.webhookUrl ? (
+                                <div className="bg-green-50 border border-green-200 rounded-md p-3">
+                                    <div className="flex items-center justify-between">
+                                        <div>
+                                            <p className="text-sm text-green-800 font-medium flex items-center">
+                                                <CheckCircle size={16} className="mr-2" />
+                                                Webhook идэвхтэй
+                                            </p>
+                                            <p className="text-xs text-green-600 mt-1 break-all">
+                                                {settings.telegram.webhookUrl}
+                                            </p>
+                                        </div>
+                                        <button
+                                            type="button"
+                                            onClick={removeWebhook}
+                                            disabled={settingUpWebhook}
+                                            className="px-3 py-1.5 text-xs font-medium text-red-700 bg-red-100 rounded hover:bg-red-200 disabled:opacity-50"
+                                        >
+                                            Устгах
+                                        </button>
+                                    </div>
+                                </div>
+                            ) : (
+                                <div className="flex items-center gap-3">
+                                    <button
+                                        type="button"
+                                        onClick={setupWebhook}
+                                        disabled={settingUpWebhook || !settings.telegram?.botToken}
+                                        className="flex items-center px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-md hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
+                                    >
+                                        {settingUpWebhook ? (
+                                            <>
+                                                <Loader2 size={16} className="mr-2 animate-spin" />
+                                                Тохируулж байна...
+                                            </>
+                                        ) : (
+                                            <>
+                                                <Link2 size={16} className="mr-2" />
+                                                Webhook идэвхжүүлэх
+                                            </>
+                                        )}
+                                    </button>
+                                    {webhookStatus === 'error' && (
+                                        <span className="text-sm text-red-600">Алдаа гарлаа. Bot Token шалгана уу.</span>
+                                    )}
+                                </div>
+                            )}
+                        </div>
+
                         {/* Telegram Guide Accordion */}
                         <div className="mt-4 border border-blue-100 rounded-md overflow-hidden">
                             <button
@@ -638,11 +811,98 @@ export default function SettingsPage() {
                                         <span className="bg-blue-100 text-blue-700 rounded-full w-5 h-5 flex items-center justify-center text-xs font-bold mr-2 mt-0.5 shrink-0">4</span>
                                         <p>Өөрийн <b>Chat ID</b>-г авахын тулд <b>@userinfobot</b>-той чатлаж өөрийн ID-г аваад "Admin Chat ID" хэсэгт оруулна.</p>
                                     </div>
+                                    <div className="flex items-start">
+                                        <span className="bg-blue-100 text-blue-700 rounded-full w-5 h-5 flex items-center justify-center text-xs font-bold mr-2 mt-0.5 shrink-0">5</span>
+                                        <p><b>"Webhook идэвхжүүлэх"</b> товч дарж интерактив функцуудыг ашиглана (захиалга баталгаажуулах, данс илгээх г.м).</p>
+                                    </div>
                                     <p className="bg-yellow-50 p-2 rounded text-xs text-yellow-800 border border-yellow-100 mt-2">
                                         Мэдэгдэл хүлээн авахын тулд таны бот заавал <b>Active</b> байх ёстойг анхаарна уу.
                                     </p>
                                 </div>
                             )}
+                        </div>
+                    </div>
+                </div>
+
+                {/* Payment Settings */}
+                <div className="bg-white shadow rounded-lg p-6 border-l-4 border-green-400">
+                    <div className="flex items-center mb-4">
+                        <CreditCard className="text-green-600 mr-2" />
+                        <h2 className="text-xl font-semibold text-gray-900">Төлбөрийн Мэдээлэл</h2>
+                    </div>
+                    <p className="text-sm text-gray-500 mb-4">
+                        Захиалга баталгаажуулсны дараа энэ мэдээллийг Telegram-аар илгээх боломжтой.
+                    </p>
+                    <div className="space-y-4">
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <div>
+                                <label className="block text-sm font-medium text-gray-700">Банкны Нэр</label>
+                                <input
+                                    type="text"
+                                    className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-green-500 focus:ring-green-500 sm:text-sm border p-2"
+                                    value={settings.payment?.bankName || ""}
+                                    onChange={(e) => setSettings({
+                                        ...settings,
+                                        payment: { ...(settings.payment || { bankName: "", accountNumber: "", accountName: "" }), bankName: e.target.value }
+                                    })}
+                                    placeholder="Хаан банк"
+                                />
+                            </div>
+                            <div>
+                                <label className="block text-sm font-medium text-gray-700">Дансны Дугаар</label>
+                                <input
+                                    type="text"
+                                    className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-green-500 focus:ring-green-500 sm:text-sm border p-2"
+                                    value={settings.payment?.accountNumber || ""}
+                                    onChange={(e) => setSettings({
+                                        ...settings,
+                                        payment: { ...(settings.payment || { bankName: "", accountNumber: "", accountName: "" }), accountNumber: e.target.value }
+                                    })}
+                                    placeholder="5000123456"
+                                />
+                            </div>
+                        </div>
+                        <div>
+                            <label className="block text-sm font-medium text-gray-700">Данс Эзэмшигчийн Нэр</label>
+                            <input
+                                type="text"
+                                className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-green-500 focus:ring-green-500 sm:text-sm border p-2"
+                                value={settings.payment?.accountName || ""}
+                                onChange={(e) => setSettings({
+                                    ...settings,
+                                    payment: { ...(settings.payment || { bankName: "", accountNumber: "", accountName: "" }), accountName: e.target.value }
+                                })}
+                                placeholder="Компанийн нэр эсвэл хувь хүний нэр"
+                            />
+                        </div>
+                        <div>
+                            <label className="block text-sm font-medium text-gray-700">QPay / QR Код Зураг</label>
+                            <div className="mt-1 flex items-center space-x-4">
+                                {(qrImageFile || settings.payment?.qrImageUrl) ? (
+                                    <div className="relative w-32 h-32 border rounded overflow-hidden bg-gray-50 flex items-center justify-center">
+                                        <img
+                                            src={qrImageFile ? URL.createObjectURL(qrImageFile) : settings.payment?.qrImageUrl}
+                                            alt="QR Preview"
+                                            className="max-w-full max-h-full object-contain"
+                                        />
+                                    </div>
+                                ) : (
+                                    <div className="h-32 w-32 border-2 border-dashed rounded bg-gray-50 flex items-center justify-center text-gray-400">
+                                        <CreditCard size={32} />
+                                    </div>
+                                )}
+                                <div className="flex-1">
+                                    <input
+                                        type="file"
+                                        accept="image/*"
+                                        onChange={handleQrImageChange}
+                                        className="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-green-50 file:text-green-700 hover:file:bg-green-100"
+                                    />
+                                    <p className="mt-1 text-xs text-gray-500">
+                                        QPay эсвэл бусад төлбөрийн QR кодын зургийг оруулна уу.
+                                    </p>
+                                </div>
+                            </div>
                         </div>
                     </div>
                 </div>

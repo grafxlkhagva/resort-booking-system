@@ -7,11 +7,14 @@ import { signOut } from "firebase/auth";
 import { auth, db } from "@/lib/firebase";
 import { useRouter } from "next/navigation";
 import { doc, onSnapshot } from "firebase/firestore";
-import { Menu, X, UtensilsCrossed, User, LogOut, LayoutDashboard } from "lucide-react";
+import { Menu, X, UtensilsCrossed, User, LogOut, LayoutDashboard, Home } from "lucide-react";
+import LanguageSelector from "./LanguageSelector";
+import { useLanguage } from "@/contexts/LanguageContext";
 
 export default function Navbar() {
   const { user, isAdmin } = useAuth();
   const router = useRouter();
+  const { t } = useLanguage();
   const [menuOpen, setMenuOpen] = useState(false);
   const [branding, setBranding] = useState({
     siteName: "ResortBook",
@@ -46,8 +49,8 @@ export default function Navbar() {
   };
 
   const navLinks = [
-    { href: "/", label: "Нүүр" },
-    { href: "/restaurant", label: "Ресторан", icon: UtensilsCrossed },
+    { href: "/", label: t('nav_home', 'Нүүр'), icon: Home },
+    { href: "/restaurant", label: t('nav_restaurant', 'Ресторан'), icon: UtensilsCrossed },
   ];
 
   return (
@@ -86,7 +89,7 @@ export default function Navbar() {
                 href="/admin"
                 className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-[var(--foreground)]/80 hover:text-[var(--primary)] hover:bg-[var(--primary)]/5 text-sm font-medium transition-colors"
               >
-                <LayoutDashboard size={16} /> Самбар
+                <LayoutDashboard size={16} /> {t('nav_admin', 'Самбар')}
               </Link>
             )}
             {user ? (
@@ -95,13 +98,13 @@ export default function Navbar() {
                   href="/profile"
                   className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-[var(--foreground)]/80 hover:text-[var(--primary)] hover:bg-[var(--primary)]/5 text-sm font-medium transition-colors"
                 >
-                  <User size={16} /> Захиалгууд
+                  <User size={16} /> {t('nav_my_bookings', 'Захиалгууд')}
                 </Link>
                 <button
                   onClick={handleLogout}
                   className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-[var(--foreground)]/80 hover:text-red-600 hover:bg-red-500/5 text-sm font-medium transition-colors"
                 >
-                  <LogOut size={16} /> Гарах
+                  <LogOut size={16} /> {t('nav_logout', 'Гарах')}
                 </button>
               </>
             ) : (
@@ -109,9 +112,12 @@ export default function Navbar() {
                 href="/login"
                 className="btn-primary inline-flex items-center justify-center px-4 text-sm"
               >
-                Нэвтрэх
+                {t('nav_login', 'Нэвтрэх')}
               </Link>
             )}
+            <div className="ml-1 border-l border-[var(--border)] pl-1">
+              <LanguageSelector />
+            </div>
           </nav>
 
           {/* Mobile: right side: cart(restaurant) + menu button */}
@@ -123,6 +129,7 @@ export default function Navbar() {
             >
               <UtensilsCrossed size={22} />
             </Link>
+            <LanguageSelector />
             <button
               onClick={() => setMenuOpen((o) => !o)}
               className="touch-target flex items-center justify-center p-2.5 rounded-xl text-[var(--foreground)]/80 hover:bg-[var(--primary)]/10"
@@ -156,7 +163,7 @@ export default function Navbar() {
                 onClick={() => setMenuOpen(false)}
               >
                 <LayoutDashboard size={20} className="text-[var(--muted)]" />
-                Админ Самбар
+                {t('nav_admin', 'Админ Самбар')}
               </Link>
             )}
             {user ? (
@@ -167,14 +174,14 @@ export default function Navbar() {
                   onClick={() => setMenuOpen(false)}
                 >
                   <User size={20} className="text-[var(--muted)]" />
-                  Миний Захиалгууд
+                  {t('nav_my_bookings', 'Миний Захиалгууд')}
                 </Link>
                 <button
                   onClick={handleLogout}
                   className="flex w-full items-center gap-3 min-h-[var(--touch)] px-4 rounded-xl text-red-600 font-medium hover:bg-red-500/10 transition-colors text-left"
                 >
                   <LogOut size={20} />
-                  Гарах
+                  {t('nav_logout', 'Гарах')}
                 </button>
               </>
             ) : (
@@ -183,7 +190,7 @@ export default function Navbar() {
                 className="btn-primary flex items-center justify-center mt-2"
                 onClick={() => setMenuOpen(false)}
               >
-                Нэвтрэх
+                {t('nav_login', 'Нэвтрэх')}
               </Link>
             )}
           </nav>

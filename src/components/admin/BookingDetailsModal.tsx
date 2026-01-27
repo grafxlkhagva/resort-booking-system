@@ -4,6 +4,7 @@ import { useState } from "react";
 import { Booking } from "@/types";
 import { House } from "@/types";
 import { X, Calendar, Users, DollarSign, Clock, User as UserIcon } from "lucide-react";
+import { useLanguage } from "@/contexts/LanguageContext";
 
 interface BookingDetailsModalProps {
     booking: Booking;
@@ -24,6 +25,7 @@ export default function BookingDetailsModal({
     onClose,
     onUpdateStatus
 }: BookingDetailsModalProps) {
+    const { t } = useLanguage();
     const [updating, setUpdating] = useState(false);
 
     const handleStatusUpdate = async (status: Booking["status"]) => {
@@ -38,7 +40,7 @@ export default function BookingDetailsModal({
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
             <div className="bg-white rounded-lg max-w-2xl w-full max-h-[90vh] overflow-y-auto">
                 <div className="sticky top-0 bg-white border-b border-gray-200 px-6 py-4 flex items-center justify-between">
-                    <h2 className="text-xl font-bold text-gray-900">Захиалгын дэлгэрэнгүй</h2>
+                    <h2 className="text-xl font-bold text-gray-900">{t('admin_booking_details', 'Захиалгын дэлгэрэнгүй')}</h2>
                     <button
                         onClick={onClose}
                         className="text-gray-400 hover:text-gray-500"
@@ -54,8 +56,8 @@ export default function BookingDetailsModal({
                             ${booking.status === 'confirmed' ? 'bg-green-100 text-green-800' :
                                 booking.status === 'cancelled' ? 'bg-red-100 text-red-800' :
                                     'bg-yellow-100 text-yellow-800'}`}>
-                            {booking.status === 'confirmed' ? 'Баталгаажсан' :
-                                booking.status === 'cancelled' ? 'Цуцлагдсан' : 'Хүлээгдэж буй'}
+                            {booking.status === 'confirmed' ? "Баталгаажсан" :
+                                booking.status === 'cancelled' ? "Цуцлагдсан" : "Хүлээгдэж буй"}
                         </span>
                         <span className="text-sm text-gray-500">
                             Үүсгэсэн: {new Date(booking.createdAt).toLocaleString('mn-MN')}
@@ -168,14 +170,14 @@ export default function BookingDetailsModal({
                                 disabled={updating}
                                 className="flex-1 bg-green-600 text-white py-2 px-4 rounded-md hover:bg-green-700 disabled:opacity-50 transition-colors"
                             >
-                                {updating ? 'Боловсруулж байна...' : 'Баталгаажуулах'}
+                                {updating ? "Боловсруулж байна..." : "Баталгаажуулах"}
                             </button>
                             <button
                                 onClick={() => handleStatusUpdate('cancelled')}
                                 disabled={updating}
                                 className="flex-1 bg-red-600 text-white py-2 px-4 rounded-md hover:bg-red-700 disabled:opacity-50 transition-colors"
                             >
-                                {updating ? 'Боловсруулж байна...' : 'Цуцлах'}
+                                {updating ? "Боловсруулж байна..." : "Цуцлах"}
                             </button>
                         </div>
                     )}
@@ -186,7 +188,7 @@ export default function BookingDetailsModal({
                                 disabled={updating}
                                 className="w-full bg-red-600 text-white py-2 px-4 rounded-md hover:bg-red-700 disabled:opacity-50 transition-colors"
                             >
-                                {updating ? 'Боловсруулж байна...' : 'Захиалга цуцлах'}
+                                {updating ? "Боловсруулж байна..." : "Захиалга цуцлах"}
                             </button>
                         </div>
                     )}

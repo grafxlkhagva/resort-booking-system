@@ -37,6 +37,9 @@ export default function ManageHouses() {
                     amenities: data.amenities || [],
                     createdAt: data.createdAt?.seconds ? data.createdAt.seconds * 1000 : Date.now(),
                     discount: data.discount || undefined,
+                    localizedNames: data.localizedNames || {},
+                    localizedDescriptions: data.localizedDescriptions || {},
+                    localizedLongDescriptions: data.localizedLongDescriptions || {},
                 } as House;
             });
             setHouses(houseList);
@@ -66,6 +69,9 @@ export default function ManageHouses() {
                 images: data.images || [],
                 amenities: data.amenities,
                 discount: data.discount,
+                localizedNames: data.localizedNames || {},
+                localizedDescriptions: data.localizedDescriptions || {},
+                localizedLongDescriptions: data.localizedLongDescriptions || {},
             };
 
             if (currentHouse) {

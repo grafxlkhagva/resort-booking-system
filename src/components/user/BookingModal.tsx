@@ -10,6 +10,7 @@ import { X, Check, Calendar, Users as UsersIcon } from "lucide-react";
 import { calculateBookingPrice, type BookingPriceBreakdown } from "@/lib/utils";
 import { sendBookingNotificationAction } from "@/actions/telegram";
 import LoginModal from "@/components/auth/LoginModal";
+import { useLanguage } from "@/contexts/LanguageContext";
 
 interface BookingModalProps {
     house: House;
@@ -28,6 +29,7 @@ export default function BookingModal({
 }: BookingModalProps) {
     const { user } = useAuth();
     const router = useRouter();
+    const { currentLanguage, t } = useLanguage();
     const [startDate, setStartDate] = useState(initialStartDate);
     const [endDate, setEndDate] = useState(initialEndDate);
     const [guestCount, setGuestCount] = useState(initialGuestCount);
@@ -54,7 +56,7 @@ export default function BookingModal({
 
                 // Validation
                 if (end <= start) {
-                    setError("Буцах өдөр нь ирэх өдрөөс хойш байх ёстой.");
+                    setError(t('booking_invalid_dates', 'Буцах өдөр нь ирэх өдрөөс хойш байх ёстой.'));
                     setPriceBreakdown(null);
                     return;
                 }
@@ -86,12 +88,12 @@ export default function BookingModal({
         if (!user) return; // Should be handled, but typescript check
 
         if (!priceBreakdown || priceBreakdown.totalPrice <= 0) {
-            setError("Огноо зөв сонгоно уу.");
+            setError(t('booking_invalid_selection', 'Огноо зөв сонгоно уу.'));
             return;
         }
 
         if (guestCount > house.capacity) {
-            setError(`Зочдын тоо ${house.capacity}-аас хэтрэхгүй байх ёстой.`);
+            setError(t('booking_exceed_capacity', `Зочдын тоо ${house.capacity}-аас хэтрэхгүй байх ёстой.`, { capacity: house.capacity }));
             return;
         }
 
@@ -115,12 +117,12 @@ export default function BookingModal({
                 return s < requestedEnd && e > requestedStart;
             });
             if (hasOverlap) {
-                setError("Энэ хугацаанд байр боломжгүй байна. Өөр огноо сонгоно уу.");
+                setError(t('booking_overlap_error', 'Энэ хугацаанд байр боломжгүй байна. Өөр огноо сонгоно уу.'));
                 setLoading(false);
                 return;
             }
 
-            await addDoc(collection(db, "bookings"), {
+            const bookingRef = await addDoc(collection(db, "bookings"), {
                 userId: user.uid,
                 houseId: house.id,
                 houseName: house.name,
@@ -142,7 +144,8 @@ export default function BookingModal({
                     new Date(startDate).toLocaleDateString(),
                     new Date(endDate).toLocaleDateString(),
                     priceBreakdown.totalPrice,
-                    false
+                    false,
+                    bookingRef.id // Pass booking ID for callback buttons
                 );
 
                 if (!notifResult.success) {
@@ -158,7 +161,7 @@ export default function BookingModal({
             }, 2000);
         } catch (error) {
             console.error("Error creating booking:", error);
-            setError("Захиалга үүсгэхэд алдаа гарлаа. Дахин оролдоно уу.");
+            setError(t('booking_error', 'Захиалга үүсгэхэд алдаа гарлаа. Дахин оролдоно уу.'));
         } finally {
             setLoading(false);
         }
@@ -171,21 +174,21 @@ export default function BookingModal({
                     <div className="mx-auto flex items-center justify-center h-14 w-14 rounded-full bg-green-100 text-green-600 mb-4">
                         <Check className="h-7 w-7" />
                     </div>
-                    <h2 className="text-xl font-bold text-[var(--foreground)] mb-2">Амжилттай!</h2>
+                    <h2 className="text-xl font-bold text-[var(--foreground)] mb-2">{t('booking_success', 'Амжилттай!')}</h2>
                     <p className="text-[var(--muted)] mb-6">
-                        Таны захиалга амжилттай илгээгдлээ. Админ баталгаажуулсны дараа мэдэгдэл ирнэ.
+                        {t('booking_success_info', 'Таны захиалга амжилттай илгээгдлээ. Админ баталгаажуулсны дараа мэдэгдэл ирнэ.')}
                     </p>
                     <div className="bg-[var(--background)] rounded-xl p-4 mb-6 text-left">
                         <div className="text-sm text-[var(--muted)] flex items-center gap-2 mb-1">
-                            <Calendar size={16} /> {new Date(startDate).toLocaleDateString("mn-MN")} – {new Date(endDate).toLocaleDateString("mn-MN")}
+                            <Calendar size={16} /> {new Date(startDate).toLocaleDateString(currentLanguage === 'mn' ? "mn-MN" : "en-US")} – {new Date(endDate).toLocaleDateString(currentLanguage === 'mn' ? "mn-MN" : "en-US")}
                         </div>
                         <div className="text-sm text-[var(--muted)] flex items-center gap-2 mb-2">
-                            <UsersIcon size={16} /> {guestCount} зочин
+                            <UsersIcon size={16} /> {guestCount} {t('people', 'зочин')}
                         </div>
                         <div className="text-lg font-bold text-[var(--primary)]">${priceBreakdown?.totalPrice}</div>
                     </div>
                     <button onClick={() => router.push("/profile")} className="btn-primary w-full">
-                        Миний захиалгууд руу
+                        {t('nav_my_bookings', 'Миний захиалгууд руу')}
                     </button>
                 </div>
             </div>
@@ -203,11 +206,11 @@ export default function BookingModal({
                     <X size={22} />
                 </button>
 
-                <h2 className="text-xl font-bold text-[var(--foreground)] mb-4 pr-10">{house.name} – захиалах</h2>
+                <h2 className="text-xl font-bold text-[var(--foreground)] mb-4 pr-10">{house.localizedNames?.[currentLanguage] || house.name} – {t('book_now', 'захиалах')}</h2>
 
                 <form onSubmit={handleBooking} className="space-y-4">
                     <div>
-                        <label className="block text-sm font-medium text-[var(--foreground)] mb-1">Ирэх өдөр</label>
+                        <label className="block text-sm font-medium text-[var(--foreground)] mb-1">{t('house_check_in', 'Ирэх өдөр')}</label>
                         <input
                             type="date"
                             required
@@ -218,7 +221,7 @@ export default function BookingModal({
                         />
                     </div>
                     <div>
-                        <label className="block text-sm font-medium text-[var(--foreground)] mb-1">Буцах өдөр</label>
+                        <label className="block text-sm font-medium text-[var(--foreground)] mb-1">{t('house_check_out', 'Буцах өдөр')}</label>
                         <input
                             type="date"
                             required
@@ -229,7 +232,7 @@ export default function BookingModal({
                         />
                     </div>
                     <div>
-                        <label className="block text-sm font-medium text-[var(--foreground)] mb-1">Зочид (макс. {house.capacity})</label>
+                        <label className="block text-sm font-medium text-[var(--foreground)] mb-1">{t('house_guests', 'Зочид')} ({t('max', 'макс')}. {house.capacity})</label>
                         <input
                             type="number"
                             required
@@ -250,21 +253,21 @@ export default function BookingModal({
                     {priceBreakdown && priceBreakdown.totalDays > 0 && (
                         <div className="pt-4 border-t border-[var(--border)] space-y-2">
                             <div className="flex justify-between text-sm text-[var(--muted)]">
-                                <span>${house.price} × {priceBreakdown.totalDays} хоног</span>
+                                <span>{t('booking_night_rate', '${price} × {days} хоног', { price: house.price, days: priceBreakdown.totalDays })}</span>
                                 <span>${priceBreakdown.basePrice}</span>
                             </div>
                             {priceBreakdown.discountedDays > 0 && (
                                 <div className="flex justify-between text-sm text-green-600">
-                                    <span>Хямдрал ({priceBreakdown.discountedDays} хоног)</span>
+                                    <span>{t('discount', 'Хямдрал')} ({priceBreakdown.discountedDays} {t('day', 'хоног')})</span>
                                     <span>-${priceBreakdown.discountAmount}</span>
                                 </div>
                             )}
                             <div className="flex justify-between font-bold text-[var(--foreground)] pt-2 border-t border-[var(--border)]">
-                                <span>Нийт</span>
+                                <span>{t('total', 'Нийт')}</span>
                                 <span className={priceBreakdown.discountAmount > 0 ? "text-green-600" : ""}>${priceBreakdown.totalPrice}</span>
                             </div>
                             {priceBreakdown.discountAmount > 0 && (
-                                <p className="text-xs text-green-600 text-center">Та ${priceBreakdown.discountAmount} хэмнэлээ.</p>
+                                <p className="text-xs text-green-600 text-center">{t('booking_discount_save', 'Та ${amount} хэмнэлээ.', { amount: priceBreakdown.discountAmount })}</p>
                             )}
                         </div>
                     )}
@@ -274,7 +277,7 @@ export default function BookingModal({
                         disabled={loading || !priceBreakdown || priceBreakdown.totalPrice <= 0}
                         className="btn-primary w-full"
                     >
-                        {loading ? "Боловсруулж байна…" : "Захиалга баталгаажуулах"}
+                        {loading ? t('booking_processing', 'Боловсруулж байна…') : t('booking_confirm', 'Захиалга баталгаажуулах')}
                     </button>
                 </form>
             </div>

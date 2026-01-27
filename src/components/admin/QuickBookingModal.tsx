@@ -7,18 +7,22 @@ import { db } from "@/lib/firebase";
 import { House, Booking, ResortSettings } from "@/types";
 import { sendBookingNotificationAction } from "@/actions/telegram"; // Updated import
 import { getDoc } from "firebase/firestore";
+import { useLanguage } from "@/contexts/LanguageContext";
 
 interface QuickBookingModalProps {
     isOpen: boolean;
     onClose: () => void;
     houses: House[];
     preSelectedHouseId?: string;
+    initialStartDate?: Date | null;
     onSuccess?: () => void;
 }
 
-export default function QuickBookingModal({ isOpen, onClose, houses, preSelectedHouseId, onSuccess }: QuickBookingModalProps) {
+export default function QuickBookingModal({ isOpen, onClose, houses, preSelectedHouseId, initialStartDate, onSuccess }: QuickBookingModalProps) {
+    const { t } = useLanguage();
     const [selectedHouseId, setSelectedHouseId] = useState(preSelectedHouseId || "");
-    const [startDate, setStartDate] = useState("");
+    const [startDate, setStartDate] = useState(initialStartDate ? initialStartDate.toISOString().split('T')[0] : "");
+    const [nights, setNights] = useState(1);
     const [endDate, setEndDate] = useState("");
     const [guestFirstName, setGuestFirstName] = useState("");
     const [guestLastName, setGuestLastName] = useState("");
@@ -33,6 +37,24 @@ export default function QuickBookingModal({ isOpen, onClose, houses, preSelected
     useEffect(() => {
         if (preSelectedHouseId) setSelectedHouseId(preSelectedHouseId);
     }, [preSelectedHouseId]);
+
+    useEffect(() => {
+        if (initialStartDate) {
+            setStartDate(initialStartDate.toISOString().split('T')[0]);
+        }
+    }, [initialStartDate]);
+
+    // Calculate end date based on start date and nights
+    useEffect(() => {
+        if (startDate && nights > 0) {
+            const start = new Date(startDate);
+            const end = new Date(start);
+            end.setDate(start.getDate() + nights);
+            setEndDate(end.toISOString().split('T')[0]);
+        } else {
+            setEndDate("");
+        }
+    }, [startDate, nights]);
 
     const calculateTotalPrice = () => {
         if (!selectedHouseId || !startDate || !endDate) return 0;
@@ -119,11 +141,12 @@ export default function QuickBookingModal({ isOpen, onClose, houses, preSelected
                 console.error("Failed to send Telegram notification:", err);
             }
 
-            setSuccess("Захиалга амжилттай үүсгэгдлээ!");
+            setSuccess('Захиалга амжилттай үүсгэгдлээ!');
             setTimeout(() => {
                 setSuccess("");
                 setSubmitting(false);
                 setStartDate("");
+                setNights(1);
                 setEndDate("");
                 setGuestFirstName("");
                 setGuestLastName("");
@@ -249,12 +272,26 @@ export default function QuickBookingModal({ isOpen, onClose, houses, preSelected
                             <label className="block text-sm font-medium text-gray-700 mb-1">Дуусах огноо</label>
                             <input
                                 type="date"
-                                required
+                                disabled
                                 value={endDate}
-                                onChange={(e) => setEndDate(e.target.value)}
-                                min={startDate}
-                                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500"
+                                className="w-full px-3 py-2 border border-gray-300 rounded-lg bg-gray-100 text-gray-500 cursor-not-allowed"
                             />
+                        </div>
+                        <div>
+                            <label className="block text-sm font-medium text-gray-700 mb-1">Хонрох тоо</label>
+                            <div className="relative">
+                                <input
+                                    type="number"
+                                    min="1"
+                                    required
+                                    value={nights}
+                                    onChange={(e) => setNights(Math.max(1, parseInt(e.target.value) || 1))}
+                                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500"
+                                />
+                                <div className="absolute inset-y-0 right-0 pr-3 flex items-center pointer-events-none text-gray-500 text-sm">
+                                    хоног
+                                </div>
+                            </div>
                         </div>
                     </div>
 

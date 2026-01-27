@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from "next";
 import "./globals.css";
 import { AuthProvider } from "@/contexts/AuthContext";
+import { LanguageProvider } from "@/contexts/LanguageContext";
 import { CartProvider } from "@/contexts/CartContext";
 import Navbar from "@/components/ui/Navbar";
 
@@ -25,12 +26,14 @@ export default function RootLayout({
     <html lang="mn" suppressHydrationWarning>
       <body className="font-sans antialiased min-h-screen" suppressHydrationWarning>
         <AuthProvider>
-          <CartProvider>
-            <Navbar />
-            <main className="min-h-screen bg-[var(--background)]">
-              {children}
-            </main>
-          </CartProvider>
+          <LanguageProvider>
+            <CartProvider>
+              <Navbar />
+              <main className="min-h-screen bg-[var(--background)]">
+                {children}
+              </main>
+            </CartProvider>
+          </LanguageProvider>
         </AuthProvider>
       </body>
     </html>
