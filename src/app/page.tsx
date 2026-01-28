@@ -80,10 +80,6 @@ export default function Home() {
         </div>
 
         <div className="relative z-10 max-w-5xl mx-auto px-6 text-center text-white">
-          <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full glass-dark mb-6 animate-fade-in opacity-0" style={{ animationDelay: '200ms' }}>
-            <Star size={14} className="text-yellow-400 fill-yellow-400" />
-            <span className="text-sm font-medium tracking-wide uppercase">{t('welcome_tag', 'Малчин Амралтын Газар')}</span>
-          </div>
           <h1 className="text-4xl md:text-6xl lg:text-7xl font-bold tracking-tight mb-8 animate-fade-in opacity-0" style={{ animationDelay: '400ms' }}>
             {houseTitle}
           </h1>
